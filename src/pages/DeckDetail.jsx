@@ -77,24 +77,45 @@ export default function DeckDetail() {
   };
 
   const addCardToDeck = (card, section) => {
-    const key = section === "main" ? "cards" : section === "extra" ? "extra_deck" : "side_deck";
-    const current = [...(deck[key] || [])];
-    const existing = current.find((c) => c.card_id === String(card.id));
-    if (existing) {
-      existing.quantity = (existing.quantity || 1) + 1;
-    } else {
-      current.push({
-        card_name: card.name,
-        card_id: String(card.id),
-        image_url: card.card_images?.[0]?.image_url_small || "",
-        quantity: 1,
-        card_type: card.type,
-        owned: false,
-      });
-    }
-    updateDeck.mutate({ [key]: current });
-    toast.success(`${card.name} adicionada!`);
-  };
+  const key = section === "main" ? "cards" : section === "extra" ? "extra_deck" : "side_deck";
+  const cardId = String(card.id);
+
+  // Conta quantas cópias desta carta já existem no deck inteiro
+  const allSections = [
+    ...(deck.cards || []),
+    ...(deck.extra_deck || []),
+    ...(deck.side_deck || []),
+  ];
+
+  const totalCopies = allSections
+    .filter((c) => String(c.card_id) === cardId)
+    .reduce((total, c) => total + (Number(c.quantity) || 0), 0);
+
+  // Regra oficial: máximo de 3 cópias da mesma carta no deck inteiro
+  if (totalCopies >= 3) {
+    toast.error("Limite atingido: máximo de 3 cópias desta carta no deck.");
+    return;
+  }
+
+  const current = [...(deck[key] || [])];
+  const existing = current.find((c) => String(c.card_id) === cardId);
+
+  if (existing) {
+    existing.quantity = (Number(existing.quantity) || 1) + 1;
+  } else {
+    current.push({
+      card_name: card.name,
+      card_id: cardId,
+      image_url: card.card_images?.[0]?.image_url_small || "",
+      quantity: 1,
+      card_type: card.type,
+      owned: false,
+    });
+  }
+
+  updateDeck.mutate({ [key]: current });
+  toast.success(`${card.name} adicionada!`);
+};
 
   const addToWishlist = async (cardData) => {
     await base44.entities.WishlistCard.create({
