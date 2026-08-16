@@ -70,11 +70,45 @@ export default function DeckDetail() {
   const missingCards = allCards.filter((c) => c.missing_qty > 0);
 
   const removeCard = (section, cardId) => {
-    const key = section === "main" ? "cards" : section === "extra" ? "extra_deck" : "side_deck";
-    const updated = (deck[key] || []).filter((c) => c.card_id !== cardId);
-    updateDeck.mutate({ [key]: updated });
-    toast.success("Carta removida do deck!");
-  };
+  const key =
+    section === "main"
+      ? "cards"
+      : section === "extra"
+        ? "extra_deck"
+        : "side_deck";
+
+  const current = [...(deck[key] || [])];
+
+  const existing = current.find(
+    (c) => String(c.card_id) === String(cardId)
+  );
+
+  if (!existing) return;
+
+  const quantity = Number(existing.quantity) || 1;
+
+  let updated;
+
+  if (quantity > 1) {
+    updated = current.map((c) =>
+      String(c.card_id) === String(cardId)
+        ? { ...c, quantity: quantity - 1 }
+        : c
+    );
+  } else {
+    updated = current.filter(
+      (c) => String(c.card_id) !== String(cardId)
+    );
+  }
+
+  updateDeck.mutate({ [key]: updated });
+
+  toast.success(
+    quantity > 1
+      ? "1 cópia removida do deck!"
+      : "Carta removida do deck!"
+  );
+};
 
   const addCardToDeck = (card, section) => {
   const key = section === "main" ? "cards" : section === "extra" ? "extra_deck" : "side_deck";
