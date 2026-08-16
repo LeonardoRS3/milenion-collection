@@ -332,18 +332,49 @@ export default function Wishlist() {
       ),
   });
 
-  const updateCard = useMutation({
-    mutationFn: ({ id, data }) =>
-      base44.entities.WishlistCard.update(id, data),
+  const acquireCard = useMutation({
+  mutationFn: async (card) => {
+    // Cria a carta na coleção
+    await base44.entities.CollectionCard.create({
+      card_name: card.card_name,
+      card_id: card.card_id,
+      image_url: card.image_url || "",
+      card_type: card.card_type || "",
+      rarity: card.rarity || "",
+      quantity: Number(card.quantity_desired) || 1,
+      purchase_price: Number(card.target_price) || 0,
+      current_price: Number(card.current_price) || 0,
+      status: "not_purchased",
+      priority: card.priority || "medium",
+      condition: "near_mint",
+      language: "portuguese",
+      is_favorite: false,
+      notes: card.notes || "",
+    });
 
-    onSuccess: () => {
-      queryClient.invalidateQueries({
-        queryKey: ["wishlist"],
-      });
+    // Remove a carta da Wishlist
+    await base44.entities.WishlistCard.delete(card.id);
+  },
 
-      toast.success("Atualizado!");
-    },
-  });
+  onSuccess: () => {
+    queryClient.invalidateQueries({
+      queryKey: ["wishlist"],
+    });
+
+    queryClient.invalidateQueries({
+      queryKey: ["collection"],
+    });
+
+    toast.success("Carta adicionada à coleção!");
+  },
+
+  onError: (error) => {
+    console.error(error);
+    toast.error(
+      error.message || "Não foi possível adicionar à coleção."
+    );
+  },
+});
 
   const deleteCard = useMutation({
     mutationFn: (id) =>
@@ -558,23 +589,13 @@ export default function Wishlist() {
                       size="icon"
                       variant="ghost"
                       className="h-8 w-8"
-                      onClick={() =>
-                        updateCard.mutate({
-                          id: card.id,
-                          data: {
-                            is_purchased:
-                              !card.is_purchased,
-                          },
-                        })
-                      }
+                     onClick={() => acquireCard.mutate(card)}
                     >
-                      <Check
-                        className={`w-4 h-4 ${
-                          card.is_purchased
-                            ? "text-green-500"
-                            : "text-muted-foreground"
-                        }`}
-                      />
+                     {acquireCard.isPending ? (
+  <Loader2 className="w-4 h-4 animate-spin" />
+) : (
+  "Já adquirido"
+)}
                     </Button>
 
                     <Button
@@ -607,3 +628,5 @@ export default function Wishlist() {
     </>
   );
 }
+
+
