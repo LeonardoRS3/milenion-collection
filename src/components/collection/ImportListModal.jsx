@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { base44 } from "@/api/base44Client";
 import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -10,7 +10,13 @@ import {
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
-import { parseDecklList, fetchCard, matchStatus } from "@/lib/decklistParser";
+import {
+  parseDecklList,
+  fetchCard,
+  matchStatus,
+  suggestDeckSection,
+  getSectionLabel,
+} from "@/lib/decklistParser";
 
 // ── Status badge ──────────────────────────────────────────────────────────────
 function StatusBadge({ status }) {
@@ -22,7 +28,7 @@ function StatusBadge({ status }) {
 }
 
 // ── Card preview row ──────────────────────────────────────────────────────────
-function PreviewRow({ item, onRemove }) {
+function PreviewRow({ item, onRemove, onSectionChange }) {
   const { card, parsed, status } = item;
   const image = card?.card_images?.[0]?.image_url_small;
 
@@ -60,6 +66,18 @@ function PreviewRow({ item, onRemove }) {
             <span className="text-[10px] px-1 py-0.5 rounded bg-primary/10 text-primary font-body truncate max-w-[100px]">{card.type}</span>
           )}
           <StatusBadge status={status} />
+          
+          {card && (
+  <select
+    value={item.section || "main"}
+    onChange={(e) => onSectionChange(e.target.value)}
+    className="text-[10px] bg-secondary border border-border/40 rounded px-1.5 py-0.5 text-foreground"
+  >
+    <option value="main">Main</option>
+    <option value="extra">Extra</option>
+    <option value="side">Side</option>
+  </select>
+)}
         </div>
       </div>
 
@@ -75,12 +93,19 @@ function PreviewRow({ item, onRemove }) {
 }
 
 // ── Main Modal ────────────────────────────────────────────────────────────────
-export default function ImportListModal({ open, onClose }) {
+export default function ImportListModal({
+  open,
+  onClose,
+  targetDeckId = null,
+  targetDeckName = "",
+}) {
   const [text, setText] = useState("");
   const [processing, setProcessing] = useState(false);
   const [progress, setProgress] = useState(0);
   const [items, setItems] = useState([]); // { parsed, card, status }
-  const [destination, setDestination] = useState("collection");
+  const [destination, setDestination] = useState(
+  targetDeckId ? "deck" : "collection"
+);
   const [defaultStatus, setDefaultStatus] = useState("owned");
   const [defaultPriority, setDefaultPriority] = useState("medium");
   const [saving, setSaving] = useState(false);
@@ -92,7 +117,18 @@ export default function ImportListModal({ open, onClose }) {
     queryFn: () => base44.entities.Deck.list("-created_date", 50),
     enabled: open,
   });
-  const [selectedDeckId, setSelectedDeckId] = useState("");
+  const [selectedDeckId, setSelectedDeckId] = useState(
+  targetDeckId || ""
+);
+
+useEffect(() => {
+  if (!open) return;
+
+  if (targetDeckId) {
+    setDestination("deck");
+    setSelectedDeckId(targetDeckId);
+  }
+}, [open, targetDeckId]);
 
   // Parsed lines from textarea
   const parsedLines = parseDecklList(text);
@@ -118,7 +154,14 @@ export default function ImportListModal({ open, onClose }) {
       const p = parsed[i];
       const card = await fetchCard(p.searchName);
       const status = matchStatus(card, p.searchName);
-      results.push({ parsed: p, card, status });
+      const section = suggestDeckSection(card, p.section);
+
+results.push({
+  parsed: p,
+  card,
+  status,
+  section,
+});
       setItems([...results]);
       setProgress(Math.round(((i + 1) / parsed.length) * 100));
     }
@@ -129,6 +172,103 @@ export default function ImportListModal({ open, onClose }) {
   const handleRemove = (idx) => {
     setItems((prev) => prev.filter((_, i) => i !== idx));
   };
+
+const handleSectionChange = (idx, section) => {
+  setItems((prev) =>
+    prev.map((item, i) =>
+      i === idx
+        ? { ...item, section }
+        : item
+    )
+  );
+};
+
+const validateDeckImport = (valid, deck) => {
+  const totals = {
+    main: 0,
+    extra: 0,
+    side: 0,
+  };
+
+  const existingCopies = {};
+
+  // Conta o que já existe no deck
+  for (const section of ["cards", "extra_deck", "side_deck"]) {
+    const sectionName =
+      section === "cards"
+        ? "main"
+        : section === "extra_deck"
+          ? "extra"
+          : "side";
+
+    for (const card of deck[section] || []) {
+      const cardId = String(card.card_id);
+      const quantity = Number(card.quantity) || 0;
+
+      totals[sectionName] += quantity;
+      existingCopies[cardId] =
+        (existingCopies[cardId] || 0) + quantity;
+    }
+  }
+
+  const importedCopies = {};
+
+  // Soma as cartas que serão importadas
+  for (const item of valid) {
+    const section = item.section || "main";
+    const cardId = String(item.card.id);
+    const quantity = Number(item.parsed.quantity) || 0;
+
+    totals[section] += quantity;
+
+    importedCopies[cardId] =
+      (importedCopies[cardId] || 0) + quantity;
+  }
+
+  // Verifica limite de 3 cópias por carta
+  for (const [cardId, quantity] of Object.entries(importedCopies)) {
+    const total =
+      (existingCopies[cardId] || 0) + quantity;
+
+    if (total > 3) {
+      const item = valid.find(
+        (i) => String(i.card.id) === cardId
+      );
+
+      return {
+        valid: false,
+        message: `${item?.card?.name || "Carta"} ultrapassa o limite de 3 cópias. Total: ${total}.`,
+      };
+    }
+  }
+
+  // Limites das seções
+  if (totals.main > 60) {
+    return {
+      valid: false,
+      message: `Main Deck não pode ter mais de 60 cartas. Total: ${totals.main}.`,
+    };
+  }
+
+  if (totals.extra > 15) {
+    return {
+      valid: false,
+      message: `Extra Deck não pode ter mais de 15 cartas. Total: ${totals.extra}.`,
+    };
+  }
+
+  if (totals.side > 15) {
+    return {
+      valid: false,
+      message: `Side Deck não pode ter mais de 15 cartas. Total: ${totals.side}.`,
+    };
+  }
+
+  return {
+    valid: true,
+    totals,
+  };
+};
 
   const handleSave = async () => {
     const valid = items.filter((i) => i.status !== "not_found" && i.card);
@@ -180,29 +320,88 @@ export default function ImportListModal({ open, onClose }) {
         queryClient.invalidateQueries({ queryKey: ["wishlist"] });
 
       } else if (destination === "deck") {
-        const deckId = selectedDeckId;
-        if (!deckId) { toast.error("Selecione um deck!"); setSaving(false); return; }
-        const deck = decks.find((d) => d.id === deckId);
-        if (!deck) { setSaving(false); return; }
+  const deckId = selectedDeckId;
 
-        const newCards = valid.map((item) => ({
-          card_name: item.card.name,
-          card_id: String(item.card.id),
-          image_url: item.card.card_images?.[0]?.image_url_small || "",
-          quantity: item.parsed.quantity,
-          card_type: item.card.type,
-          owned: true,
-        }));
-        const merged = [...(deck.cards || [])];
-        for (const nc of newCards) {
-          const existing = merged.find((c) => c.card_id === nc.card_id);
-          if (existing) existing.quantity = (existing.quantity || 1) + nc.quantity;
-          else merged.push(nc);
-        }
-        await base44.entities.Deck.update(deckId, { cards: merged });
-        queryClient.invalidateQueries({ queryKey: ["decks"] });
-        count = newCards.length;
-      }
+  if (!deckId) {
+    toast.error("Selecione um deck!");
+    setSaving(false);
+    return;
+  }
+
+  const deck = decks.find((d) => d.id === deckId);
+
+  if (!deck) {
+    toast.error("Deck não encontrado.");
+    setSaving(false);
+    return;
+  }
+
+  const validation = validateDeckImport(valid, deck);
+
+  if (!validation.valid) {
+    toast.error(validation.message);
+    setSaving(false);
+    return;
+  }
+
+  const sections = {
+    main: [...(deck.cards || [])],
+    extra: [...(deck.extra_deck || [])],
+    side: [...(deck.side_deck || [])],
+  };
+
+  for (const item of valid) {
+    const section = item.section || "main";
+
+    const key =
+      section === "extra"
+        ? "extra"
+        : section === "side"
+          ? "side"
+          : "main";
+
+    const list = sections[key];
+
+    const cardId = String(item.card.id);
+
+    const existing = list.find(
+      (c) => String(c.card_id) === cardId
+    );
+
+    if (existing) {
+      existing.quantity =
+        (Number(existing.quantity) || 0) +
+        Number(item.parsed.quantity);
+    } else {
+      list.push({
+        card_name: item.card.name,
+        card_id: cardId,
+        image_url:
+          item.card.card_images?.[0]?.image_url_small || "",
+        quantity: Number(item.parsed.quantity),
+        card_type: item.card.type,
+        owned: true,
+      });
+    }
+  }
+
+  await base44.entities.Deck.update(deckId, {
+    cards: sections.main,
+    extra_deck: sections.extra,
+    side_deck: sections.side,
+  });
+
+  queryClient.invalidateQueries({
+    queryKey: ["decks"],
+  });
+
+  queryClient.invalidateQueries({
+    queryKey: ["deck", deckId],
+  });
+
+  count = valid.length;
+}
+        
 
       toast.success(`${count} carta${count !== 1 ? "s" : ""} adicionada${count !== 1 ? "s" : ""}!`);
       handleClose();
@@ -392,7 +591,14 @@ export default function ImportListModal({ open, onClose }) {
               <div className="flex-1 overflow-y-auto px-5 py-3 space-y-2">
                 <AnimatePresence>
                   {items.map((item, i) => (
-                    <PreviewRow key={i} item={item} onRemove={() => handleRemove(i)} />
+                   <PreviewRow
+  key={i}
+  item={item}
+  onRemove={() => handleRemove(i)}
+  onSectionChange={(section) =>
+    handleSectionChange(i, section)
+  }
+/>
                   ))}
                 </AnimatePresence>
               </div>
