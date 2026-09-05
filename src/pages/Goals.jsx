@@ -139,13 +139,29 @@ export default function Goals() {
           <AnimatePresence>
             {filtered.map((goal) => (
               <GoalCard
-                key={goal.id}
-                goal={goal}
-                onEdit={() => { setEditingGoal(goal); setFormOpen(true); }}
-                onComplete={() => updateMutation.mutate({ id: goal.id, data: { ...goal, status: "completed", completed_at: new Date().toISOString() } })}
-                onPause={() => updateMutation.mutate({ id: goal.id, data: { ...goal, status: goal.status === "paused" ? "active" : "paused" } })}
-                onDelete={() => deleteMutation.mutate(goal.id)}
-              />
+  key={goal.id}
+  goal={goal}
+  onEdit={() => { setEditingGoal(goal); setFormOpen(true); }}
+  onComplete={() =>
+    updateMutation.mutate({
+      id: goal.id,
+      data: {
+        status: "completed",
+        completed_at: new Date().toISOString(),
+        title: goal.title,
+      },
+    })
+  }
+  onPause={() =>
+    updateMutation.mutate({
+      id: goal.id,
+      data: {
+        status: goal.status === "paused" ? "active" : "paused",
+      },
+    })
+  }
+  onDelete={() => deleteMutation.mutate(goal.id)}
+/>
             ))}
           </AnimatePresence>
         </motion.div>
