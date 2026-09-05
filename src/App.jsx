@@ -25,6 +25,7 @@ import Profile from '@/pages/Profile';
 import Stats from '@/pages/Stats';
 import Goals from '@/pages/Goals';
 import History from '@/pages/History';
+import Purchases from '@/pages/Purchases';
 
 const AuthenticatedApp = () => {
   const { isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin } = useAuth();
@@ -67,6 +68,7 @@ const AuthenticatedApp = () => {
           <Route path="/stats" element={<Stats />} />
           <Route path="/goals" element={<Goals />} />
           <Route path="/history" element={<History />} />
+          <Route path="/purchases" element={<Purchases />} />
         </Route>
       </Route>
 
