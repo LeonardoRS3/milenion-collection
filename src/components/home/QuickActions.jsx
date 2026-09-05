@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { Plus, Layers, Star, BookOpen, Search, List } from "lucide-react";
+import { Plus, Layers, Star, BookOpen, Search, List, ShoppingBag } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export default function QuickActions({ onAddCard, onImportList }) {
@@ -8,6 +8,7 @@ export default function QuickActions({ onAddCard, onImportList }) {
     { icon: Layers, label: "Coleção", path: "/collection", color: "text-primary", glow: "glow-purple" },
     { icon: Star, label: "Wishlist", path: "/wishlist", color: "text-gold", glow: "glow-gold" },
     { icon: BookOpen, label: "Decks", path: "/decks", color: "text-neon-blue", glow: "glow-blue" },
+    { icon: ShoppingBag, label: "Compras", path: "/purchases", color: "text-gold", glow: "glow-gold" },
   ];
 
   return (
