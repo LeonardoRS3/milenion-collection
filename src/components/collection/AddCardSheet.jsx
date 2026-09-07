@@ -9,15 +9,15 @@ import { Loader2, Plus } from "lucide-react";
 
 export default function AddCardSheet({ open, onClose, card, onConfirm, isLoading }) {
   const [form, setForm] = useState({
-    quantity: 1,
-    rarity: card?.rarity || card?.card_sets?.[0]?.set_rarity || "",
-    condition: "near_mint",
-    language: "portuguese",
-    status: "owned",
-    priority: "medium",
-    purchase_price: card?.purchase_price || "",
-    notes: "",
-  });
+  quantity: 1,
+  rarity: card?.rarity || card?.card_sets?.[0]?.set_rarity || "",
+  condition: "near_mint",
+  language: "portuguese",
+  status: "not_purchased",
+  priority: "medium",
+  purchase_price: card?.purchase_price || "",
+  notes: "",
+});
 
   const set = (field, value) => setForm((prev) => ({ ...prev, [field]: value }));
 
@@ -88,12 +88,11 @@ export default function AddCardSheet({ open, onClose, card, onConfirm, isLoading
               <Select value={form.status} onValueChange={(v) => set("status", v)}>
                 <SelectTrigger className="bg-secondary border-border/50 text-xs font-body">
                   <SelectValue />
-                </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="owned">Comprada</SelectItem>
-                  <SelectItem value="not_purchased">Não comprada</SelectItem>
-                  <SelectItem value="searching">Procurando</SelectItem>
-                </SelectContent>
+  <SelectItem value="not_purchased">Não comprada</SelectItem>
+  <SelectItem value="searching">Procurando</SelectItem>
+  <SelectItem value="owned">Comprada</SelectItem>
+</SelectContent>
               </Select>
             </div>
             <div className="space-y-1.5">

@@ -4,6 +4,7 @@ import { base44 } from "@/api/base44Client";
 import { motion, AnimatePresence } from "framer-motion";
 import { Plus, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { createPurchaseFromCard } from "@/lib/purchaseService";
 import { Input } from "@/components/ui/input";
 import AddCardModal from "@/components/collection/AddCardModal";
 import CollectionCardItem from "@/components/collection/CollectionCardItem";
@@ -24,26 +25,117 @@ export default function Collection() {
   });
 
   const updateMutation = useMutation({
-    mutationFn: ({ id, data }) => base44.entities.CollectionCard.update(id, data),
-    onSuccess: (_, { data }) => {
-      queryClient.invalidateQueries({ queryKey: ["collection"] });
-      if (data.current_price != null && selectedCard?.current_price != null && data.current_price !== selectedCard.current_price) {
-        logEvent("price_change", {
-          title: `Preço alterado: ${selectedCard.card_name}`,
-          card_name: selectedCard.card_name,
-          card_image_url: selectedCard.image_url,
-          old_value: selectedCard.current_price,
-          new_value: data.current_price,
+  mutationFn: async ({ id, data, previousCard }) => {
+    const oldStatus = previousCard?.status;
+    const newStatus = data.status;
+
+    // Verifica se houve uma mudança REAL para "Comprada"
+    const becamePurchased =
+      oldStatus !== "owned" &&
+      newStatus === "owned";
+
+    // 1. Atualiza a carta
+    const updatedCard =
+      await base44.entities.CollectionCard.update(
+        id,
+        data
+      );
+
+    // 2. Se acabou de virar "Comprada",
+    // cria automaticamente uma compra
+    if (becamePurchased) {
+      try {
+        await createPurchaseFromCard({
+          cardId: updatedCard.card_id,
+          cardName: updatedCard.card_name,
+          imageUrl: updatedCard.image_url,
+          quantity: updatedCard.quantity,
+          purchasePrice: updatedCard.purchase_price,
+          notes: updatedCard.notes,
         });
-      } else {
-        logEvent("collection_update", {
-          title: `Carta atualizada: ${selectedCard?.card_name}`,
-          card_name: selectedCard?.card_name,
-          card_image_url: selectedCard?.image_url,
-        });
+      } catch (error) {
+        // Tenta desfazer a alteração do status
+        try {
+          await base44.entities.CollectionCard.update(
+            id,
+            {
+              status: oldStatus,
+            }
+          );
+        } catch {
+          // Ignora erro secundário.
+        }
+
+        throw new Error(
+          "A carta não foi marcada como comprada porque o registro da compra falhou."
+        );
       }
-    },
-  });
+    }
+
+    return {
+      updatedCard,
+      becamePurchased,
+    };
+  },
+
+  onSuccess: (
+    result,
+    { data, previousCard }
+  ) => {
+    queryClient.invalidateQueries({
+      queryKey: ["collection"],
+    });
+
+    if (result.becamePurchased) {
+      queryClient.invalidateQueries({
+        queryKey: ["purchases"],
+      });
+    }
+
+    if (
+      data.current_price != null &&
+      previousCard?.current_price != null &&
+      data.current_price !==
+        previousCard.current_price
+    ) {
+      logEvent("price_change", {
+        title: `Preço alterado: ${previousCard.card_name}`,
+        card_name: previousCard.card_name,
+        card_image_url: previousCard.image_url,
+        old_value: previousCard.current_price,
+        new_value: data.current_price,
+      });
+    } else {
+      logEvent("collection_update", {
+        title: `Carta atualizada: ${previousCard?.card_name}`,
+        card_name: previousCard?.card_name,
+        card_image_url: previousCard?.image_url,
+      });
+    }
+
+    if (result.becamePurchased) {
+      logEvent("purchase", {
+        title: `Comprou ${previousCard.card_name}`,
+        card_name: previousCard.card_name,
+        card_image_url: previousCard.image_url,
+        new_value:
+          (Number(data.purchase_price) || 0) *
+          (Number(data.quantity) || 1),
+      });
+
+      toast.success(
+        "Carta marcada como comprada e compra registrada!"
+      );
+    }
+  },
+
+  onError: (error) => {
+    toast.error(
+      error.message ||
+        "Não foi possível atualizar a carta."
+    );
+  },
+});
 
   const deleteMutation = useMutation({
     mutationFn: (id) => base44.entities.CollectionCard.delete(id),
@@ -139,7 +231,13 @@ export default function Collection() {
           card={selectedCard}
           open={!!selectedCard}
           onClose={() => setSelectedCard(null)}
-          onUpdate={(data) => updateMutation.mutate({ id: selectedCard.id, data })}
+          onUpdate={(data) =>
+  updateMutation.mutate({
+    id: selectedCard.id,
+    data,
+    previousCard: selectedCard,
+  })
+}
           onDelete={() => deleteMutation.mutate(selectedCard.id)}
         />
       )}

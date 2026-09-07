@@ -121,12 +121,13 @@ export default function Purchases() {
 
           const currentQuantity = Number(card.quantity || 0);
 
-          await base44.entities.CollectionCard.update(
-            card.id,
-            {
-              quantity: currentQuantity + purchaseQuantity,
-            }
-          );
+         await base44.entities.CollectionCard.update(
+  card.id,
+  {
+    quantity: currentQuantity + purchaseQuantity,
+    status: "owned",
+  }
+);
         }
 
         return purchase;

@@ -19,9 +19,9 @@ export const PRIORITY_OPTIONS = [
   { value: "essential", label: "Essencial" },
 ];
 export const STATUS_OPTIONS = [
-  { value: "owned", label: "Comprada" },
   { value: "not_purchased", label: "Não comprada" },
   { value: "searching", label: "Procurando" },
+  { value: "owned", label: "Comprada" },
 ];
 export const LANGUAGE_OPTIONS = [
   { value: "portuguese", label: "PT" },

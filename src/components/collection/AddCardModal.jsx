@@ -4,6 +4,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { createPurchaseFromCard } from "@/lib/purchaseService";
 import { Search as SearchIcon, Loader2, Plus, Star, Zap, Clock, TrendingUp } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
@@ -118,43 +119,127 @@ export default function AddCardModal({ open, onClose }) {
   };
 
   const addToCollection = useMutation({
-    mutationFn: ({ card, formData }) =>
-      base44.entities.CollectionCard.create({
-        card_name: card.name,
-        card_id: String(card.id),
-        image_url: card.card_images?.[0]?.image_url_small || "",
-        card_type: card.type,
-        attribute: card.attribute || "",
-        archetype: card.archetype || "",
-        rarity: formData.rarity || card.card_sets?.[0]?.set_rarity || "",
-        quantity: formData.quantity,
-        purchase_price: formData.purchase_price,
-        current_price: card.card_prices?.[0]?.tcgplayer_price
-          ? parseFloat(card.card_prices[0].tcgplayer_price)
-          : 0,
-        status: formData.status,
-        priority: formData.priority,
-        condition: formData.condition,
-        language: formData.language,
-        notes: formData.notes,
-        level: card.level || 0,
-        atk: card.atk || 0,
-        def: card.def || 0,
-      }),
-    onSuccess: (created, { card }) => {
-      queryClient.invalidateQueries({ queryKey: ["collection"] });
-      toast.success("Carta adicionada à coleção!");
-      import("@/lib/historyService").then(({ logEvent }) => {
-        logEvent("collection_add", {
-          title: `Adicionou ${card.name} à coleção`,
+  mutationFn: async ({ card, formData }) => {
+    const imageUrl =
+      card.card_images?.[0]?.image_url_small || "";
+
+    let createdCollectionCard;
+
+    try {
+      // 1. Cria a carta na coleção
+      createdCollectionCard =
+        await base44.entities.CollectionCard.create({
           card_name: card.name,
-          card_image_url: card.card_images?.[0]?.image_url_small || "",
-          new_value: created.purchase_price || 0,
+          card_id: String(card.id),
+          image_url: imageUrl,
+          card_type: card.type,
+          attribute: card.attribute || "",
+          archetype: card.archetype || "",
+          rarity:
+            formData.rarity ||
+            card.card_sets?.[0]?.set_rarity ||
+            "",
+          quantity: Number(formData.quantity) || 1,
+          purchase_price:
+            Number(formData.purchase_price) || 0,
+          current_price:
+            card.card_prices?.[0]?.tcgplayer_price
+              ? parseFloat(
+                  card.card_prices[0].tcgplayer_price
+                )
+              : 0,
+          status: formData.status,
+          priority: formData.priority,
+          condition: formData.condition,
+          language: formData.language,
+          notes: formData.notes,
+          level: card.level || 0,
+          atk: card.atk || 0,
+          def: card.def || 0,
         });
+
+      // 2. Se foi marcada como COMPRADA,
+      // registra automaticamente em purchases
+      if (formData.status === "owned") {
+        try {
+          await createPurchaseFromCard({
+            cardId: card.id,
+            cardName: card.name,
+            imageUrl,
+            quantity: formData.quantity,
+            purchasePrice: formData.purchase_price,
+            notes: formData.notes,
+          });
+        } catch (purchaseError) {
+          // Se não conseguiu criar a compra,
+          // remove a carta para não deixar os dados inconsistentes.
+          try {
+            await base44.entities.CollectionCard.delete(
+              createdCollectionCard.id
+            );
+          } catch {
+            // Ignora erro secundário.
+          }
+
+          throw new Error(
+            "A carta não foi adicionada porque o registro da compra falhou."
+          );
+        }
+      }
+
+      return createdCollectionCard;
+    } catch (error) {
+      throw error;
+    }
+  },
+
+  onSuccess: (created, { card, formData }) => {
+    queryClient.invalidateQueries({
+      queryKey: ["collection"],
+    });
+
+    queryClient.invalidateQueries({
+      queryKey: ["purchases"],
+    });
+
+    toast.success(
+      formData.status === "owned"
+        ? "Carta adicionada e compra registrada!"
+        : "Carta adicionada à coleção!"
+    );
+
+    import("@/lib/historyService").then(({ logEvent }) => {
+      logEvent("collection_add", {
+        title: `Adicionou ${card.name} à coleção`,
+        card_name: card.name,
+        card_image_url:
+          card.card_images?.[0]?.image_url_small || "",
+        new_value: created.purchase_price || 0,
       });
-      handleClose();
-    },
-  });
+
+      if (formData.status === "owned") {
+        logEvent("purchase", {
+          title: `Comprou ${card.name}`,
+          card_name: card.name,
+          card_image_url:
+            card.card_images?.[0]?.image_url_small || "",
+          new_value:
+            (Number(formData.purchase_price) || 0) *
+            (Number(formData.quantity) || 1),
+        });
+      }
+    });
+
+    handleClose();
+  },
+
+  onError: (error) => {
+    toast.error(
+      error.message ||
+        "Não foi possível adicionar a carta."
+    );
+  },
+});
 
   const handleClose = () => {
     clearTimeout(debounceRef.current);

@@ -72,10 +72,10 @@ export default function CardDetailSheet({ card, open, onClose, onUpdate, onDelet
               <Select value={form.status} onValueChange={(v) => setForm({ ...form, status: v })}>
                 <SelectTrigger className="bg-secondary border-border/50 mt-1 text-xs"><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="owned">Comprada</SelectItem>
-                  <SelectItem value="not_purchased">Não comprada</SelectItem>
-                  <SelectItem value="searching">Procurando</SelectItem>
-                </SelectContent>
+  <SelectItem value="not_purchased">Não comprada</SelectItem>
+  <SelectItem value="searching">Procurando</SelectItem>
+  <SelectItem value="owned">Comprada</SelectItem>
+</SelectContent>
               </Select>
             </div>
             <div>
