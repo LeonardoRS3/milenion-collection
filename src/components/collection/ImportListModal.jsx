@@ -1,88 +1,190 @@
 import { useState, useRef, useEffect } from "react";
 import { base44 } from "@/api/base44Client";
-import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
-  FileText, Loader2, CheckCircle2, AlertCircle, HelpCircle,
-  Trash2, Play, Plus, ChevronDown, Zap, X
+  useQuery,
+  useQueryClient,
+} from "@tanstack/react-query";
+
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+
+import { Button } from "@/components/ui/button";
+
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+
+import {
+  FileText,
+  Loader2,
+  CheckCircle2,
+  AlertCircle,
+  HelpCircle,
+  Trash2,
+  Play,
+  Plus,
+  Zap,
+  X,
 } from "lucide-react";
-import { motion, AnimatePresence } from "framer-motion";
+
+import {
+  motion,
+  AnimatePresence,
+} from "framer-motion";
+
 import { toast } from "sonner";
+
 import {
   parseDecklList,
   fetchCard,
   matchStatus,
   suggestDeckSection,
-  getSectionLabel,
 } from "@/lib/decklistParser";
 
-// ── Status badge ──────────────────────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────
+// Status da busca
+// ─────────────────────────────────────────────────────────────
+
 function StatusBadge({ status }) {
-  if (status === "exact")
-    return <span className="text-[10px] px-1.5 py-0.5 rounded-md bg-green-500/15 text-green-400 font-body">Encontrada</span>;
-  if (status === "partial")
-    return <span className="text-[10px] px-1.5 py-0.5 rounded-md bg-gold/15 text-gold font-body">Parcial</span>;
-  return <span className="text-[10px] px-1.5 py-0.5 rounded-md bg-destructive/15 text-destructive font-body">Não encontrada</span>;
+  if (status === "exact") {
+    return (
+      <span className="text-[10px] px-1.5 py-0.5 rounded-md bg-green-500/15 text-green-400 font-body">
+        Encontrada
+      </span>
+    );
+  }
+
+  if (status === "partial") {
+    return (
+      <span className="text-[10px] px-1.5 py-0.5 rounded-md bg-gold/15 text-gold font-body">
+        Parcial
+      </span>
+    );
+  }
+
+  return (
+    <span className="text-[10px] px-1.5 py-0.5 rounded-md bg-destructive/15 text-destructive font-body">
+      Não encontrada
+    </span>
+  );
 }
 
-// ── Card preview row ──────────────────────────────────────────────────────────
-function PreviewRow({ item, onRemove, onSectionChange }) {
-  const { card, parsed, status } = item;
-  const image = card?.card_images?.[0]?.image_url_small;
+// ─────────────────────────────────────────────────────────────
+// Linha de carta
+// ─────────────────────────────────────────────────────────────
+
+function PreviewRow({
+  item,
+  onRemove,
+  onSectionChange,
+}) {
+  const {
+    card,
+    parsed,
+    status,
+  } = item;
+
+  const image =
+    card?.card_images?.[0]?.image_url_small || "";
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 6 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, x: -20 }}
+      initial={{
+        opacity: 0,
+        y: 6,
+      }}
+      animate={{
+        opacity: 1,
+        y: 0,
+      }}
+      exit={{
+        opacity: 0,
+        x: -20,
+      }}
       className="flex items-center gap-3 glass rounded-xl p-2.5 border border-border/20 hover:border-border/40 transition-colors"
     >
-      {/* Image */}
+      {/* Imagem */}
       <div className="w-10 h-14 flex-shrink-0 rounded-md overflow-hidden bg-secondary">
         {image ? (
-          <img src={image} alt={card.name} className="w-full h-full object-cover" loading="lazy" />
+          <img
+            src={image}
+            alt={card?.name || parsed.originalName}
+            className="w-full h-full object-cover"
+            loading="lazy"
+          />
         ) : (
           <div className="w-full h-full flex items-center justify-center text-muted-foreground/30">
-            {status === "not_found" ? <AlertCircle className="w-4 h-4 text-destructive/40" /> : <HelpCircle className="w-4 h-4" />}
+            {status === "not_found" ? (
+              <AlertCircle className="w-4 h-4 text-destructive/40" />
+            ) : (
+              <HelpCircle className="w-4 h-4" />
+            )}
           </div>
         )}
       </div>
 
-      {/* Info */}
+      {/* Informações */}
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-1.5 flex-wrap">
           <span className="text-xs font-body font-semibold text-foreground truncate">
             {card?.name || parsed.originalName}
           </span>
+
           {parsed.translatedFrom && (
-            <span className="text-[10px] text-muted-foreground font-body">({parsed.translatedFrom})</span>
+            <span className="text-[10px] text-muted-foreground font-body">
+              ({parsed.translatedFrom})
+            </span>
           )}
         </div>
-        <div className="flex items-center gap-2 mt-0.5">
-          <span className="text-[10px] text-muted-foreground font-body">×{parsed.quantity}</span>
+
+        <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+          <span className="text-[10px] text-muted-foreground font-body">
+            ×{parsed.quantity}
+          </span>
+
           {card?.type && (
-            <span className="text-[10px] px-1 py-0.5 rounded bg-primary/10 text-primary font-body truncate max-w-[100px]">{card.type}</span>
+            <span className="text-[10px] px-1 py-0.5 rounded bg-primary/10 text-primary font-body truncate max-w-[100px]">
+              {card.type}
+            </span>
           )}
+
           <StatusBadge status={status} />
-          
+
           {card && (
-  <select
-    value={item.section || "main"}
-    onChange={(e) => onSectionChange(e.target.value)}
-    className="text-[10px] bg-secondary border border-border/40 rounded px-1.5 py-0.5 text-foreground"
-  >
-    <option value="main">Main</option>
-    <option value="extra">Extra</option>
-    <option value="side">Side</option>
-  </select>
-)}
+            <select
+              value={item.section || "main"}
+              onChange={(e) =>
+                onSectionChange(e.target.value)
+              }
+              className="text-[10px] bg-secondary border border-border/40 rounded px-1.5 py-0.5 text-foreground"
+            >
+              <option value="main">
+                Main
+              </option>
+
+              <option value="extra">
+                Extra
+              </option>
+
+              <option value="side">
+                Side
+              </option>
+            </select>
+          )}
         </div>
       </div>
 
-      {/* Remove */}
+      {/* Remover */}
       <button
+        type="button"
         onClick={onRemove}
         className="flex-shrink-0 p-1.5 rounded-lg hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors"
       >
@@ -92,340 +194,798 @@ function PreviewRow({ item, onRemove, onSectionChange }) {
   );
 }
 
-// ── Main Modal ────────────────────────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────
+// Modal principal
+// ─────────────────────────────────────────────────────────────
+
 export default function ImportListModal({
   open,
   onClose,
   targetDeckId = null,
   targetDeckName = "",
 }) {
+  const queryClient = useQueryClient();
+
   const [text, setText] = useState("");
   const [processing, setProcessing] = useState(false);
   const [progress, setProgress] = useState(0);
-  const [items, setItems] = useState([]); // { parsed, card, status }
-  const [destination, setDestination] = useState(
-  targetDeckId ? "deck" : "collection"
-);
-  const [defaultStatus, setDefaultStatus] = useState("owned");
-  const [defaultPriority, setDefaultPriority] = useState("medium");
-  const [saving, setSaving] = useState(false);
-  const abortRef = useRef(false);
-  const queryClient = useQueryClient();
+  const [items, setItems] = useState([]);
 
-  const { data: decks = [] } = useQuery({
+  const [destination, setDestination] =
+    useState(
+      targetDeckId
+        ? "deck"
+        : "collection"
+    );
+
+  const [defaultStatus, setDefaultStatus] =
+    useState("not_purchased");
+
+  const [defaultPriority, setDefaultPriority] =
+    useState("medium");
+
+  const [saving, setSaving] = useState(false);
+
+  const abortRef = useRef(false);
+
+  const {
+    data: decks = [],
+  } = useQuery({
     queryKey: ["decks"],
-    queryFn: () => base44.entities.Deck.list("-created_date", 50),
+    queryFn: () =>
+      base44.entities.Deck.list(
+        "-created_date",
+        50
+      ),
     enabled: open,
   });
-  const [selectedDeckId, setSelectedDeckId] = useState(
-  targetDeckId || ""
-);
 
-useEffect(() => {
-  if (!open) return;
+  const [
+    selectedDeckId,
+    setSelectedDeckId,
+  ] = useState(
+    targetDeckId || ""
+  );
 
-  if (targetDeckId) {
-    setDestination("deck");
-    setSelectedDeckId(targetDeckId);
-  }
-}, [open, targetDeckId]);
+  // ─────────────────────────────────────────────────────────
+  // Sincroniza deck recebido pelo componente
+  // ─────────────────────────────────────────────────────────
 
-  // Parsed lines from textarea
-  const parsedLines = parseDecklList(text);
-  const lineCount = parsedLines.length;
+  useEffect(() => {
+    if (!open) return;
 
-  // Stats
-  const found = items.filter((i) => i.status !== "not_found").length;
-  const notFound = items.filter((i) => i.status === "not_found").length;
-  const processed = items.length;
+    if (targetDeckId) {
+      setDestination("deck");
+      setSelectedDeckId(targetDeckId);
+    }
+  }, [open, targetDeckId]);
+
+  // ─────────────────────────────────────────────────────────
+  // Lista parseada
+  // ─────────────────────────────────────────────────────────
+
+  const parsedLines =
+    parseDecklList(text);
+
+  const lineCount =
+    parsedLines.length;
+
+  // ─────────────────────────────────────────────────────────
+  // Estatísticas
+  // ─────────────────────────────────────────────────────────
+
+  const found =
+    items.filter(
+      (item) =>
+        item.status !== "not_found"
+    ).length;
+
+  const notFound =
+    items.filter(
+      (item) =>
+        item.status === "not_found"
+    ).length;
+
+  const processed =
+    items.length;
+
+  // ─────────────────────────────────────────────────────────
+  // Processar lista
+  // ─────────────────────────────────────────────────────────
 
   const handleProcess = async () => {
-    const parsed = parseDecklList(text);
-    if (!parsed.length) return;
+    const parsed =
+      parseDecklList(text);
+
+    if (!parsed.length) {
+      toast.error(
+        "Digite pelo menos uma carta."
+      );
+      return;
+    }
 
     setProcessing(true);
     setItems([]);
     setProgress(0);
+
     abortRef.current = false;
 
     const results = [];
-    for (let i = 0; i < parsed.length; i++) {
-      if (abortRef.current) break;
-      const p = parsed[i];
-      const card = await fetchCard(p.searchName);
-      const status = matchStatus(card, p.searchName);
-      const section = suggestDeckSection(card, p.section);
 
-results.push({
-  parsed: p,
-  card,
-  status,
-  section,
-});
-      setItems([...results]);
-      setProgress(Math.round(((i + 1) / parsed.length) * 100));
+    for (
+      let i = 0;
+      i < parsed.length;
+      i++
+    ) {
+      if (abortRef.current) {
+        break;
+      }
+
+      const current =
+        parsed[i];
+
+      try {
+        const card =
+          await fetchCard(
+            current.searchName
+          );
+
+        const status =
+          matchStatus(
+            card,
+            current.searchName
+          );
+
+        const section =
+          suggestDeckSection(
+            card,
+            current.section
+          );
+
+        results.push({
+          parsed: current,
+          card,
+          status,
+          section,
+        });
+      } catch {
+        results.push({
+          parsed: current,
+          card: null,
+          status: "not_found",
+          section:
+            current.section ||
+            "main",
+        });
+      }
+
+      setItems([
+        ...results,
+      ]);
+
+      setProgress(
+        Math.round(
+          ((i + 1) /
+            parsed.length) *
+            100
+        )
+      );
     }
 
     setProcessing(false);
   };
 
-  const handleRemove = (idx) => {
-    setItems((prev) => prev.filter((_, i) => i !== idx));
+  // ─────────────────────────────────────────────────────────
+  // Remover carta
+  // ─────────────────────────────────────────────────────────
+
+  const handleRemove = (index) => {
+    setItems((prev) =>
+      prev.filter(
+        (_, i) =>
+          i !== index
+      )
+    );
   };
 
-const handleSectionChange = (idx, section) => {
-  setItems((prev) =>
-    prev.map((item, i) =>
-      i === idx
-        ? { ...item, section }
-        : item
-    )
-  );
-};
+  // ─────────────────────────────────────────────────────────
+  // Alterar seção
+  // ─────────────────────────────────────────────────────────
 
-const validateDeckImport = (valid, deck) => {
-  const totals = {
-    main: 0,
-    extra: 0,
-    side: 0,
+  const handleSectionChange = (
+    index,
+    section
+  ) => {
+    setItems((prev) =>
+      prev.map(
+        (item, i) =>
+          i === index
+            ? {
+                ...item,
+                section,
+              }
+            : item
+      )
+    );
   };
 
-  const existingCopies = {};
+  // ─────────────────────────────────────────────────────────
+  // Validação do deck
+  // ─────────────────────────────────────────────────────────
 
-  // Conta o que já existe no deck
-  for (const section of ["cards", "extra_deck", "side_deck"]) {
-    const sectionName =
-      section === "cards"
-        ? "main"
-        : section === "extra_deck"
-          ? "extra"
-          : "side";
+  const validateDeckImport = (
+    valid,
+    deck
+  ) => {
+    const totals = {
+      main: 0,
+      extra: 0,
+      side: 0,
+    };
 
-    for (const card of deck[section] || []) {
-      const cardId = String(card.card_id);
-      const quantity = Number(card.quantity) || 0;
+    const existingCopies = {};
 
-      totals[sectionName] += quantity;
-      existingCopies[cardId] =
-        (existingCopies[cardId] || 0) + quantity;
+    // Conta cartas já existentes
+    for (const section of [
+      "cards",
+      "extra_deck",
+      "side_deck",
+    ]) {
+      const sectionName =
+        section === "cards"
+          ? "main"
+          : section ===
+              "extra_deck"
+            ? "extra"
+            : "side";
+
+      for (
+        const card of
+          deck[section] || []
+      ) {
+        const cardId =
+          String(
+            card.card_id
+          );
+
+        const quantity =
+          Number(
+            card.quantity
+          ) || 0;
+
+        totals[
+          sectionName
+        ] += quantity;
+
+        existingCopies[
+          cardId
+        ] =
+          (existingCopies[
+            cardId
+          ] || 0) +
+          quantity;
+      }
     }
-  }
 
-  const importedCopies = {};
+    const importedCopies = {};
 
-  // Soma as cartas que serão importadas
-  for (const item of valid) {
-    const section = item.section || "main";
-    const cardId = String(item.card.id);
-    const quantity = Number(item.parsed.quantity) || 0;
+    // Conta cartas importadas
+    for (const item of valid) {
+      const section =
+        item.section ||
+        "main";
 
-    totals[section] += quantity;
+      const cardId =
+        String(
+          item.card.id
+        );
 
-    importedCopies[cardId] =
-      (importedCopies[cardId] || 0) + quantity;
-  }
+      const quantity =
+        Number(
+          item.parsed.quantity
+        ) || 0;
 
-  // Verifica limite de 3 cópias por carta
-  for (const [cardId, quantity] of Object.entries(importedCopies)) {
-    const total =
-      (existingCopies[cardId] || 0) + quantity;
+      totals[
+        section
+      ] += quantity;
 
-    if (total > 3) {
-      const item = valid.find(
-        (i) => String(i.card.id) === cardId
-      );
+      importedCopies[
+        cardId
+      ] =
+        (importedCopies[
+          cardId
+        ] || 0) +
+        quantity;
+    }
 
+    // Limite de 3 cópias
+    for (
+      const [
+        cardId,
+        quantity,
+      ] of Object.entries(
+        importedCopies
+      )
+    ) {
+      const total =
+        (existingCopies[
+          cardId
+        ] || 0) +
+        quantity;
+
+      if (total > 3) {
+        const item =
+          valid.find(
+            (entry) =>
+              String(
+                entry.card.id
+              ) === cardId
+          );
+
+        return {
+          valid: false,
+          message: `${
+            item?.card?.name ||
+            "Carta"
+          } ultrapassa o limite de 3 cópias. Total: ${total}.`,
+        };
+      }
+    }
+
+    // Main Deck
+    if (totals.main > 60) {
       return {
         valid: false,
-        message: `${item?.card?.name || "Carta"} ultrapassa o limite de 3 cópias. Total: ${total}.`,
+        message: `Main Deck não pode ter mais de 60 cartas. Total: ${totals.main}.`,
       };
     }
-  }
 
-  // Limites das seções
-  if (totals.main > 60) {
+    // Extra Deck
+    if (totals.extra > 15) {
+      return {
+        valid: false,
+        message: `Extra Deck não pode ter mais de 15 cartas. Total: ${totals.extra}.`,
+      };
+    }
+
+    // Side Deck
+    if (totals.side > 15) {
+      return {
+        valid: false,
+        message: `Side Deck não pode ter mais de 15 cartas. Total: ${totals.side}.`,
+      };
+    }
+
     return {
-      valid: false,
-      message: `Main Deck não pode ter mais de 60 cartas. Total: ${totals.main}.`,
+      valid: true,
+      totals,
     };
-  }
-
-  if (totals.extra > 15) {
-    return {
-      valid: false,
-      message: `Extra Deck não pode ter mais de 15 cartas. Total: ${totals.extra}.`,
-    };
-  }
-
-  if (totals.side > 15) {
-    return {
-      valid: false,
-      message: `Side Deck não pode ter mais de 15 cartas. Total: ${totals.side}.`,
-    };
-  }
-
-  return {
-    valid: true,
-    totals,
   };
-};
+
+  // ─────────────────────────────────────────────────────────
+  // Salvar
+  // ─────────────────────────────────────────────────────────
 
   const handleSave = async () => {
-    const valid = items.filter((i) => i.status !== "not_found" && i.card);
-    if (!valid.length) return;
+    const valid =
+      items.filter(
+        (item) =>
+          item.status !==
+            "not_found" &&
+          item.card
+      );
+
+    if (!valid.length) {
+      toast.error(
+        "Nenhuma carta válida para salvar."
+      );
+      return;
+    }
 
     setSaving(true);
+
     let count = 0;
 
     try {
-      if (destination === "collection") {
-        for (const item of valid) {
-          await base44.entities.CollectionCard.create({
-            card_name: item.card.name,
-            card_id: String(item.card.id),
-            image_url: item.card.card_images?.[0]?.image_url_small || "",
-            card_type: item.card.type,
-            attribute: item.card.attribute || "",
-            archetype: item.card.archetype || "",
-            rarity: item.card.card_sets?.[0]?.set_rarity || "",
-            quantity: item.parsed.quantity,
-            purchase_price: 0,
-            current_price: item.card.card_prices?.[0]?.tcgplayer_price
-              ? parseFloat(item.card.card_prices[0].tcgplayer_price) : 0,
-            status: defaultStatus,
-            priority: defaultPriority,
-            level: item.card.level || 0,
-            atk: item.card.atk || 0,
-            def: item.card.def || 0,
-          });
+      // ─────────────────────────────────────────────────────
+      // COLEÇÃO
+      // ─────────────────────────────────────────────────────
+
+      if (
+        destination ===
+        "collection"
+      ) {
+        for (
+          const item of valid
+        ) {
+          await base44.entities.CollectionCard.create(
+            {
+              card_name:
+                item.card.name,
+
+              card_id:
+                String(
+                  item.card.id
+                ),
+
+              image_url:
+                item.card
+                  .card_images?.[0]
+                  ?.image_url_small ||
+                "",
+
+              card_type:
+                item.card.type ||
+                "",
+
+              attribute:
+                item.card
+                  .attribute ||
+                "",
+
+              archetype:
+                item.card
+                  .archetype ||
+                "",
+
+              rarity:
+                item.card
+                  .card_sets?.[0]
+                  ?.set_rarity ||
+                "",
+
+              quantity:
+                Number(
+                  item.parsed
+                    .quantity
+                ) || 1,
+
+              purchase_price: 0,
+
+              current_price:
+                item.card
+                  .card_prices?.[0]
+                  ?.tcgplayer_price
+                  ? parseFloat(
+                      item.card
+                        .card_prices[0]
+                        .tcgplayer_price
+                    )
+                  : 0,
+
+              status:
+                defaultStatus,
+
+              priority:
+                defaultPriority,
+
+              level:
+                item.card.level ||
+                0,
+
+              atk:
+                item.card.atk ||
+                0,
+
+              def:
+                item.card.def ||
+                0,
+            }
+          );
+
           count++;
         }
-        queryClient.invalidateQueries({ queryKey: ["collection"] });
 
-      } else if (destination === "wishlist") {
-        for (const item of valid) {
-          await base44.entities.WishlistCard.create({
-            card_name: item.card.name,
-            card_id: String(item.card.id),
-            image_url: item.card.card_images?.[0]?.image_url_small || "",
-            card_type: item.card.type,
-            rarity: item.card.card_sets?.[0]?.set_rarity || "",
-            quantity_desired: item.parsed.quantity,
-            priority: defaultPriority,
-            current_price: item.card.card_prices?.[0]?.tcgplayer_price
-              ? parseFloat(item.card.card_prices[0].tcgplayer_price) : 0,
-          });
+        queryClient.invalidateQueries(
+          {
+            queryKey: [
+              "collection",
+            ],
+          }
+        );
+      }
+
+      // ─────────────────────────────────────────────────────
+      // WISHLIST
+      // ─────────────────────────────────────────────────────
+
+      else if (
+        destination ===
+        "wishlist"
+      ) {
+        for (
+          const item of valid
+        ) {
+          await base44.entities.WishlistCard.create(
+            {
+              card_name:
+                item.card.name,
+
+              card_id:
+                String(
+                  item.card.id
+                ),
+
+              image_url:
+                item.card
+                  .card_images?.[0]
+                  ?.image_url_small ||
+                "",
+
+              card_type:
+                item.card.type ||
+                "",
+
+              rarity:
+                item.card
+                  .card_sets?.[0]
+                  ?.set_rarity ||
+                "",
+
+              quantity_desired:
+                Number(
+                  item.parsed
+                    .quantity
+                ) || 1,
+
+              priority:
+                defaultPriority,
+
+              current_price:
+                item.card
+                  .card_prices?.[0]
+                  ?.tcgplayer_price
+                  ? parseFloat(
+                      item.card
+                        .card_prices[0]
+                        .tcgplayer_price
+                    )
+                  : 0,
+            }
+          );
+
           count++;
         }
-        queryClient.invalidateQueries({ queryKey: ["wishlist"] });
 
-      } else if (destination === "deck") {
-  const deckId = selectedDeckId;
+        queryClient.invalidateQueries(
+          {
+            queryKey: [
+              "wishlist",
+            ],
+          }
+        );
+      }
 
-  if (!deckId) {
-    toast.error("Selecione um deck!");
-    setSaving(false);
-    return;
-  }
+      // ─────────────────────────────────────────────────────
+      // DECK
+      // ─────────────────────────────────────────────────────
 
-  const deck = decks.find((d) => d.id === deckId);
+      else if (
+        destination ===
+        "deck"
+      ) {
+        const deckId =
+          selectedDeckId;
 
-  if (!deck) {
-    toast.error("Deck não encontrado.");
-    setSaving(false);
-    return;
-  }
+        if (!deckId) {
+          toast.error(
+            "Selecione um deck!"
+          );
+          setSaving(false);
+          return;
+        }
 
-  const validation = validateDeckImport(valid, deck);
+        const deck =
+          decks.find(
+            (d) =>
+              d.id === deckId
+          );
 
-  if (!validation.valid) {
-    toast.error(validation.message);
-    setSaving(false);
-    return;
-  }
+        if (!deck) {
+          toast.error(
+            "Deck não encontrado."
+          );
+          setSaving(false);
+          return;
+        }
 
-  const sections = {
-    main: [...(deck.cards || [])],
-    extra: [...(deck.extra_deck || [])],
-    side: [...(deck.side_deck || [])],
-  };
+        const validation =
+          validateDeckImport(
+            valid,
+            deck
+          );
 
-  for (const item of valid) {
-    const section = item.section || "main";
+        if (
+          !validation.valid
+        ) {
+          toast.error(
+            validation.message
+          );
+          setSaving(false);
+          return;
+        }
 
-    const key =
-      section === "extra"
-        ? "extra"
-        : section === "side"
-          ? "side"
-          : "main";
+        const sections = {
+          main: [
+            ...(deck.cards ||
+              []),
+          ],
 
-    const list = sections[key];
+          extra: [
+            ...(deck.extra_deck ||
+              []),
+          ],
 
-    const cardId = String(item.card.id);
+          side: [
+            ...(deck.side_deck ||
+              []),
+          ],
+        };
 
-    const existing = list.find(
-      (c) => String(c.card_id) === cardId
-    );
+        for (
+          const item of valid
+        ) {
+          const section =
+            item.section ||
+            "main";
 
-    if (existing) {
-      existing.quantity =
-        (Number(existing.quantity) || 0) +
-        Number(item.parsed.quantity);
-    } else {
-      list.push({
-        card_name: item.card.name,
-        card_id: cardId,
-        image_url:
-          item.card.card_images?.[0]?.image_url_small || "",
-        quantity: Number(item.parsed.quantity),
-        card_type: item.card.type,
-        owned: true,
-      });
-    }
-  }
+          const key =
+            section === "extra"
+              ? "extra"
+              : section ===
+                  "side"
+                ? "side"
+                : "main";
 
-  await base44.entities.Deck.update(deckId, {
-    cards: sections.main,
-    extra_deck: sections.extra,
-    side_deck: sections.side,
-  });
+          const list =
+            sections[key];
 
-  queryClient.invalidateQueries({
-    queryKey: ["decks"],
-  });
+          const cardId =
+            String(
+              item.card.id
+            );
 
-  queryClient.invalidateQueries({
-    queryKey: ["deck", deckId],
-  });
+          const existing =
+            list.find(
+              (entry) =>
+                String(
+                  entry.card_id
+                ) === cardId
+            );
 
-  count = valid.length;
-}
-        
+          const quantity =
+            Number(
+              item.parsed
+                .quantity
+            ) || 1;
 
-      toast.success(`${count} carta${count !== 1 ? "s" : ""} adicionada${count !== 1 ? "s" : ""}!`);
+          if (existing) {
+            existing.quantity =
+              (Number(
+                existing.quantity
+              ) || 0) +
+              quantity;
+          } else {
+            list.push({
+              card_name:
+                item.card.name,
+
+              card_id:
+                cardId,
+
+              image_url:
+                item.card
+                  .card_images?.[0]
+                  ?.image_url_small ||
+                "",
+
+              quantity,
+
+              card_type:
+                item.card.type ||
+                "",
+
+              owned: true,
+            });
+          }
+        }
+
+        await base44.entities.Deck.update(
+          deckId,
+          {
+            cards:
+              sections.main,
+
+            extra_deck:
+              sections.extra,
+
+            side_deck:
+              sections.side,
+          }
+        );
+
+        queryClient.invalidateQueries(
+          {
+            queryKey: [
+              "decks",
+            ],
+          }
+        );
+
+        queryClient.invalidateQueries(
+          {
+            queryKey: [
+              "deck",
+              deckId,
+            ],
+          }
+        );
+
+        count =
+          valid.length;
+      }
+
+      toast.success(
+        `${count} carta${
+          count !== 1
+            ? "s"
+            : ""
+        } adicionada${
+          count !== 1
+            ? "s"
+            : ""
+        }!`
+      );
+
       handleClose();
-    } catch (err) {
-      toast.error("Erro ao salvar cartas.");
+    } catch (error) {
+      console.error(
+        "Erro ao salvar cartas:",
+        error
+      );
+
+      toast.error(
+        "Erro ao salvar cartas."
+      );
     } finally {
       setSaving(false);
     }
   };
 
+  // ─────────────────────────────────────────────────────────
+  // Fechar
+  // ─────────────────────────────────────────────────────────
+
   const handleClose = () => {
-    if (processing) abortRef.current = true;
+    if (processing) {
+      abortRef.current = true;
+    }
+
     setText("");
     setItems([]);
     setProgress(0);
     setProcessing(false);
+
     onClose();
   };
 
-  const hasResults = items.length > 0;
-  const canSave = hasResults && !processing && found > 0;
+  const hasResults =
+    items.length > 0;
+
+  const canSave =
+    hasResults &&
+    !processing &&
+    found > 0;
+
+  // ─────────────────────────────────────────────────────────
+  // Render
+  // ─────────────────────────────────────────────────────────
 
   return (
-    <Dialog open={open} onOpenChange={handleClose}>
+    <Dialog
+      open={open}
+      onOpenChange={handleClose}
+    >
       <DialogContent className="bg-card border-border/50 max-w-lg h-[88vh] flex flex-col p-0 gap-0">
         {/* Header */}
         <DialogHeader className="px-5 pt-5 pb-4 flex-shrink-0 border-b border-border/30">
@@ -436,211 +996,433 @@ const validateDeckImport = (valid, deck) => {
         </DialogHeader>
 
         <div className="flex-1 overflow-y-auto flex flex-col">
+          {/* ─────────────────────────────────────────────── */}
+          {/* INPUT */}
+          {/* ─────────────────────────────────────────────── */}
 
-          {/* ── INPUT PHASE ── */}
           {!hasResults && (
             <div className="px-5 py-4 flex flex-col gap-4 flex-1">
-              {/* Textarea */}
               <div className="flex-1 flex flex-col gap-1.5">
                 <div className="flex items-center justify-between">
-                  <label className="text-xs font-body text-muted-foreground">Cole sua decklist abaixo</label>
+                  <label className="text-xs font-body text-muted-foreground">
+                    Cole sua decklist abaixo
+                  </label>
+
                   {lineCount > 0 && (
-                    <span className="text-[11px] font-body text-primary">{lineCount} carta{lineCount !== 1 ? "s" : ""} detectada{lineCount !== 1 ? "s" : ""}</span>
+                    <span className="text-[11px] font-body text-primary">
+                      {lineCount} carta
+                      {lineCount !== 1
+                        ? "s"
+                        : ""}{" "}
+                      detectada
+                      {lineCount !== 1
+                        ? "s"
+                        : ""}
+                    </span>
                   )}
                 </div>
+
                 <textarea
                   value={text}
-                  onChange={(e) => setText(e.target.value)}
-                  placeholder={"3 Dark Magician\n1 Blue-Eyes White Dragon\n2 Ash Blossom\n\n# Ou em português:\n3 Mago Negro\n1 Dragão Branco de Olhos Azuis\n2 Flor de Cinza\n\n# Formatos aceitos:\n3 Nome da Carta\n3x Nome\nNome x3"}
+                  onChange={(e) =>
+                    setText(
+                      e.target.value
+                    )
+                  }
+                  placeholder={`3 Dark Magician
+1 Blue-Eyes White Dragon
+2 Ash Blossom
+
+# Ou em português:
+3 Mago Negro
+1 Dragão Branco de Olhos Azuis
+2 Flor de Cinza
+
+# Formatos aceitos:
+3 Nome da Carta
+3x Nome
+Nome x3`}
                   className="flex-1 min-h-[200px] w-full bg-secondary border border-border/50 rounded-xl p-3 text-sm font-mono text-foreground placeholder:text-muted-foreground/40 resize-none focus:outline-none focus:ring-1 focus:ring-primary leading-relaxed"
                 />
               </div>
 
-              {/* Hint */}
+              {/* Dica */}
               <div className="glass rounded-xl p-3 border border-primary/10 flex gap-2.5">
                 <Zap className="w-4 h-4 text-primary flex-shrink-0 mt-0.5" />
+
                 <div>
-                  <p className="text-xs font-body font-medium text-foreground/90">Busca bilíngue PT/EN</p>
+                  <p className="text-xs font-body font-medium text-foreground/90">
+                    Busca bilíngue PT/EN
+                  </p>
+
                   <p className="text-[11px] text-muted-foreground font-body mt-0.5">
-                    "Mago Negro", "Dragão Branco", "Ash Blossom" — tradução automática
+                    "Mago Negro",
+                    "Dragão Branco",
+                    "Ash Blossom"
+                    — tradução automática
                   </p>
                 </div>
               </div>
 
-              {/* Options */}
+              {/* Opções */}
               <div className="grid grid-cols-2 gap-2">
+                {/* Destino */}
                 <div className="space-y-1">
-                  <label className="text-[11px] font-body text-muted-foreground">Destino</label>
-                  <Select value={destination} onValueChange={setDestination}>
+                  <label className="text-[11px] font-body text-muted-foreground">
+                    Destino
+                  </label>
+
+                  <Select
+                    value={destination}
+                    onValueChange={
+                      setDestination
+                    }
+                  >
                     <SelectTrigger className="bg-secondary border-border/50 text-xs font-body h-8">
                       <SelectValue />
                     </SelectTrigger>
+
                     <SelectContent>
-                      <SelectItem value="collection">Coleção</SelectItem>
-                      <SelectItem value="wishlist">Wishlist</SelectItem>
-                      <SelectItem value="deck">Deck</SelectItem>
+                      <SelectItem value="collection">
+                        Coleção
+                      </SelectItem>
+
+                      <SelectItem value="wishlist">
+                        Wishlist
+                      </SelectItem>
+
+                      <SelectItem value="deck">
+                        Deck
+                      </SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
-                {destination === "deck" ? (
+
+                {/* Deck ou Status */}
+                {destination ===
+                "deck" ? (
                   <div className="space-y-1">
-                    <label className="text-[11px] font-body text-muted-foreground">Deck</label>
-                    <Select value={selectedDeckId} onValueChange={setSelectedDeckId}>
+                    <label className="text-[11px] font-body text-muted-foreground">
+                      Deck
+                    </label>
+
+                    <Select
+                      value={
+                        selectedDeckId
+                      }
+                      onValueChange={
+                        setSelectedDeckId
+                      }
+                    >
                       <SelectTrigger className="bg-secondary border-border/50 text-xs font-body h-8">
-                        <SelectValue placeholder="Selecione..." />
+                        <SelectValue
+                          placeholder={
+                            targetDeckName ||
+                            "Selecione..."
+                          }
+                        />
                       </SelectTrigger>
+
                       <SelectContent>
-                        {decks.map((d) => (
-                          <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>
-                        ))}
+                        {decks.map(
+                          (deck) => (
+                            <SelectItem
+                              key={
+                                deck.id
+                              }
+                              value={
+                                deck.id
+                              }
+                            >
+                              {deck.name}
+                            </SelectItem>
+                          )
+                        )}
                       </SelectContent>
                     </Select>
                   </div>
                 ) : (
                   <div className="space-y-1">
-                    <label className="text-[11px] font-body text-muted-foreground">Status padrão</label>
-                    <Select value={defaultStatus} onValueChange={setDefaultStatus}>
+                    <label className="text-[11px] font-body text-muted-foreground">
+                      Status padrão
+                    </label>
+
+                    <Select
+                      value={
+                        defaultStatus
+                      }
+                      onValueChange={
+                        setDefaultStatus
+                      }
+                    >
                       <SelectTrigger className="bg-secondary border-border/50 text-xs font-body h-8">
                         <SelectValue />
                       </SelectTrigger>
+
                       <SelectContent>
-                        <SelectItem value="owned">Comprada</SelectItem>
-                        <SelectItem value="not_purchased">Não comprada</SelectItem>
-                        <SelectItem value="searching">Procurando</SelectItem>
+                        <SelectItem value="not_purchased">
+                          Não comprada
+                        </SelectItem>
+
+                        <SelectItem value="searching">
+                          Procurando
+                        </SelectItem>
+
+                        <SelectItem value="owned">
+                          Comprada
+                        </SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
                 )}
               </div>
 
-              {/* Process button */}
+              {/* Botões */}
               <div className="flex gap-2">
                 <Button
-                  onClick={() => setText("")}
+                  onClick={() =>
+                    setText("")
+                  }
                   variant="outline"
                   className="border-border/50 font-body text-xs"
-                  disabled={!text.trim()}
+                  disabled={
+                    !text.trim()
+                  }
                 >
-                  <Trash2 className="w-3.5 h-3.5 mr-1" /> Limpar
+                  <Trash2 className="w-3.5 h-3.5 mr-1" />
+                  Limpar
                 </Button>
+
                 <Button
-                  onClick={handleProcess}
-                  disabled={!text.trim() || processing}
+                  onClick={
+                    handleProcess
+                  }
+                  disabled={
+                    !text.trim() ||
+                    processing
+                  }
                   className="flex-1 bg-primary hover:bg-primary/90 font-body text-xs"
                 >
                   {processing ? (
-                    <><Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />Processando...</>
+                    <>
+                      <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />
+                      Processando...
+                    </>
                   ) : (
-                    <><Play className="w-3.5 h-3.5 mr-1.5" />Processar Lista</>
+                    <>
+                      <Play className="w-3.5 h-3.5 mr-1.5" />
+                      Processar Lista
+                    </>
                   )}
                 </Button>
               </div>
             </div>
           )}
 
-          {/* ── PROCESSING PROGRESS ── */}
+          {/* ─────────────────────────────────────────────── */}
+          {/* PROGRESSO */}
+          {/* ─────────────────────────────────────────────── */}
+
           {processing && (
             <div className="px-5 py-3 flex-shrink-0 border-b border-border/20">
               <div className="flex items-center justify-between mb-1.5">
                 <span className="text-[11px] font-body text-muted-foreground">
-                  Buscando cartas... {processed}/{lineCount}
+                  Buscando cartas...{" "}
+                  {processed}/
+                  {lineCount}
                 </span>
-                <span className="text-[11px] font-display text-primary">{progress}%</span>
+
+                <span className="text-[11px] font-display text-primary">
+                  {progress}%
+                </span>
               </div>
+
               <div className="h-1.5 bg-secondary rounded-full overflow-hidden">
                 <motion.div
                   className="h-full bg-gradient-to-r from-primary to-neon-blue rounded-full"
-                  animate={{ width: `${progress}%` }}
-                  transition={{ duration: 0.3 }}
+                  animate={{
+                    width: `${progress}%`,
+                  }}
+                  transition={{
+                    duration: 0.3,
+                  }}
                 />
               </div>
             </div>
           )}
 
-          {/* ── RESULTS PHASE ── */}
+          {/* ─────────────────────────────────────────────── */}
+          {/* RESULTADOS */}
+          {/* ─────────────────────────────────────────────── */}
+
           {hasResults && (
             <div className="flex flex-col flex-1 overflow-hidden">
-              {/* Stats bar */}
+              {/* Stats */}
               <div className="px-5 py-3 flex-shrink-0 border-b border-border/20 flex items-center gap-3">
                 <div className="flex items-center gap-1.5">
                   <CheckCircle2 className="w-3.5 h-3.5 text-green-400" />
-                  <span className="text-xs font-body text-green-400">{found} válidas</span>
+
+                  <span className="text-xs font-body text-green-400">
+                    {found} válidas
+                  </span>
                 </div>
+
                 {notFound > 0 && (
                   <div className="flex items-center gap-1.5">
                     <AlertCircle className="w-3.5 h-3.5 text-destructive" />
-                    <span className="text-xs font-body text-destructive">{notFound} não encontradas</span>
+
+                    <span className="text-xs font-body text-destructive">
+                      {notFound} não encontradas
+                    </span>
                   </div>
                 )}
+
                 {processing && (
                   <div className="flex items-center gap-1.5 ml-auto">
                     <Loader2 className="w-3.5 h-3.5 animate-spin text-primary" />
-                    <span className="text-[11px] font-body text-muted-foreground">{progress}%</span>
+
+                    <span className="text-[11px] font-body text-muted-foreground">
+                      {progress}%
+                    </span>
                   </div>
                 )}
+
                 <button
-                  onClick={() => { setItems([]); setProgress(0); }}
+                  type="button"
+                  onClick={() => {
+                    setItems([]);
+                    setProgress(0);
+                  }}
                   className="ml-auto text-[11px] font-body text-muted-foreground hover:text-foreground transition-colors"
-                  disabled={processing}
+                  disabled={
+                    processing
+                  }
                 >
                   Editar lista
                 </button>
               </div>
 
-              {/* Card list */}
+              {/* Lista */}
               <div className="flex-1 overflow-y-auto px-5 py-3 space-y-2">
                 <AnimatePresence>
-                  {items.map((item, i) => (
-                   <PreviewRow
-  key={i}
-  item={item}
-  onRemove={() => handleRemove(i)}
-  onSectionChange={(section) =>
-    handleSectionChange(i, section)
-  }
-/>
-                  ))}
+                  {items.map(
+                    (
+                      item,
+                      index
+                    ) => (
+                      <PreviewRow
+                        key={`${item.parsed?.searchName || "card"}-${index}`}
+                        item={item}
+                        onRemove={() =>
+                          handleRemove(
+                            index
+                          )
+                        }
+                        onSectionChange={(
+                          section
+                        ) =>
+                          handleSectionChange(
+                            index,
+                            section
+                          )
+                        }
+                      />
+                    )
+                  )}
                 </AnimatePresence>
               </div>
 
-              {/* Footer action */}
+              {/* Footer */}
               {!processing && (
                 <div className="px-5 py-4 flex-shrink-0 border-t border-border/30 space-y-3">
-                  {/* Destination reminder */}
                   <div className="flex gap-2 items-center">
-                    <Select value={destination} onValueChange={setDestination}>
+                    <Select
+                      value={
+                        destination
+                      }
+                      onValueChange={
+                        setDestination
+                      }
+                    >
                       <SelectTrigger className="flex-1 bg-secondary border-border/50 text-xs font-body h-8">
                         <SelectValue />
                       </SelectTrigger>
+
                       <SelectContent>
-                        <SelectItem value="collection">Coleção</SelectItem>
-                        <SelectItem value="wishlist">Wishlist</SelectItem>
-                        <SelectItem value="deck">Deck</SelectItem>
+                        <SelectItem value="collection">
+                          Coleção
+                        </SelectItem>
+
+                        <SelectItem value="wishlist">
+                          Wishlist
+                        </SelectItem>
+
+                        <SelectItem value="deck">
+                          Deck
+                        </SelectItem>
                       </SelectContent>
                     </Select>
-                    {destination === "deck" && (
-                      <Select value={selectedDeckId} onValueChange={setSelectedDeckId}>
+
+                    {destination ===
+                      "deck" && (
+                      <Select
+                        value={
+                          selectedDeckId
+                        }
+                        onValueChange={
+                          setSelectedDeckId
+                        }
+                      >
                         <SelectTrigger className="flex-1 bg-secondary border-border/50 text-xs font-body h-8">
                           <SelectValue placeholder="Selecionar deck..." />
                         </SelectTrigger>
+
                         <SelectContent>
-                          {decks.map((d) => (
-                            <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>
-                          ))}
+                          {decks.map(
+                            (deck) => (
+                              <SelectItem
+                                key={
+                                  deck.id
+                                }
+                                value={
+                                  deck.id
+                                }
+                              >
+                                {
+                                  deck.name
+                                }
+                              </SelectItem>
+                            )
+                          )}
                         </SelectContent>
                       </Select>
                     )}
                   </div>
 
                   <Button
-                    onClick={handleSave}
-                    disabled={!canSave || saving}
+                    onClick={
+                      handleSave
+                    }
+                    disabled={
+                      !canSave ||
+                      saving
+                    }
                     className="w-full bg-primary hover:bg-primary/90 font-body text-sm h-10"
                   >
                     {saving ? (
-                      <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Salvando...</>
+                      <>
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        Salvando...
+                      </>
                     ) : (
-                      <><Plus className="w-4 h-4 mr-2" />Adicionar {found} carta{found !== 1 ? "s" : ""}</>
+                      <>
+                        <Plus className="w-4 h-4 mr-2" />
+                        Adicionar{" "}
+                        {found} carta
+                        {found !== 1
+                          ? "s"
+                          : ""}
+                      </>
                     )}
                   </Button>
                 </div>
