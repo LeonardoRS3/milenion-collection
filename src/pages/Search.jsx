@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { base44 } from "@/api/base44Client";
+import { entities } from "@/api/entityClient";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -44,7 +44,7 @@ export default function Search() {
     try {
       // 1. Adiciona à coleção
       createdCollectionCard =
-        await base44.entities.CollectionCard.create({
+        await entities.CollectionCard.create({
           card_name: card.name,
           card_id: String(card.id),
           image_url: imageUrl,
@@ -87,9 +87,9 @@ export default function Search() {
           });
         } catch {
           try {
-            await base44.entities.CollectionCard.delete(
-              createdCollectionCard.id
-            );
+            await entities.CollectionCard.delete(
+  createdCollectionCard.id
+);
           } catch {
             // Ignora erro secundário.
           }
@@ -133,7 +133,7 @@ export default function Search() {
 });
 
   const addToWishlist = useMutation({
-    mutationFn: (card) => base44.entities.WishlistCard.create({
+    mutationFn: (card) => entities.WishlistCard.create({
       card_name: card.name,
       card_id: String(card.id),
       image_url: card.card_images?.[0]?.image_url_small || "",
