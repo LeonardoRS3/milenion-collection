@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useParams } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { base44 } from "@/api/base44Client";
+import { entities } from "@/api/entityClient";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
 import { Loader2, LayoutGrid, AlertTriangle, BarChart3, Plus, List, Pencil } from "lucide-react";
@@ -32,7 +32,7 @@ export default function DeckDetail() {
   const { data: deck, isLoading: loadingDeck } = useQuery({
     queryKey: ["deck", deckId],
     queryFn: async () => {
-      const decks = await base44.entities.Deck.list();
+      const decks = await entities.Deck.list();
       return decks.find((d) => d.id === deckId) || null;
     },
     enabled: !!deckId,
@@ -40,11 +40,11 @@ export default function DeckDetail() {
 
   const { data: collection = [] } = useQuery({
     queryKey: ["collection"],
-    queryFn: () => base44.entities.CollectionCard.list("-created_date", 200),
+    queryFn: () => entities.CollectionCard.list("-created_date", 200),
   });
 
   const updateDeck = useMutation({
-    mutationFn: (data) => base44.entities.Deck.update(deckId, data),
+    mutationFn: (data) => entities.Deck.update(deckId, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["deck", deckId] });
       queryClient.invalidateQueries({ queryKey: ["decks"] });
@@ -152,7 +152,7 @@ export default function DeckDetail() {
 };
 
   const addToWishlist = async (cardData) => {
-    await base44.entities.WishlistCard.create({
+    await entities.WishlistCard.create({
       card_name: cardData.card_name,
       card_id: cardData.card_id,
       image_url: cardData.image_url,

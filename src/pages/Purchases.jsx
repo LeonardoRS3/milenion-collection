@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { base44 } from "@/api/base44Client";
+import { entities } from "@/api/entityClient";
 import { motion } from "framer-motion";
 import {
   ShoppingBag,
@@ -43,26 +43,26 @@ export default function Purchases() {
   // =========================
 
   const {
-    data: purchases = [],
-    isLoading: loadingPurchases,
-  } = useQuery({
-    queryKey: ["purchases"],
-    queryFn: () =>
-      base44.entities.Purchase.list("-created_date", 500),
-  });
+  data: purchases = [],
+  isLoading: loadingPurchases,
+} = useQuery({
+  queryKey: ["purchases"],
+  queryFn: () =>
+    entities.Purchase.list("-created_date", 500),
+});
 
   // =========================
   // BUSCAR COLEÇÃO
   // =========================
 
   const {
-    data: collection = [],
-    isLoading: loadingCollection,
-  } = useQuery({
-    queryKey: ["collection"],
-    queryFn: () =>
-      base44.entities.CollectionCard.list("-created_date", 500),
-  });
+  data: collection = [],
+  isLoading: loadingCollection,
+} = useQuery({
+  queryKey: ["collection"],
+  queryFn: () =>
+    entities.CollectionCard.list("-created_date", 500),
+});
 
   // =========================
   // TOTAL GASTO
@@ -100,14 +100,14 @@ export default function Purchases() {
       // 1. CRIAR REGISTRO DA COMPRA
       // =========================
 
-      const purchase = await base44.entities.Purchase.create({
-        amount: Number(amount),
-        date,
-        store: store.trim(),
-        description: description.trim(),
-        notes: notes.trim(),
-        cards_purchased: cardsPurchased,
-      });
+      const purchase = await entities.Purchase.create({
+  amount: Number(amount),
+  date,
+  store: store.trim(),
+  description: description.trim(),
+  notes: notes.trim(),
+  cards_purchased: cardsPurchased,
+});
 
       try {
         // =========================
@@ -121,7 +121,7 @@ export default function Purchases() {
 
           const currentQuantity = Number(card.quantity || 0);
 
-         await base44.entities.CollectionCard.update(
+         await entities.CollectionCard.update(
   card.id,
   {
     quantity: currentQuantity + purchaseQuantity,
@@ -138,7 +138,7 @@ export default function Purchases() {
         // =========================
 
         try {
-          await base44.entities.Purchase.delete(purchase.id);
+          await entities.Purchase.delete(purchase.id);
         } catch {
           // Ignora erro de exclusão
         }
@@ -179,8 +179,8 @@ export default function Purchases() {
   // =========================
 
   const deletePurchase = useMutation({
-    mutationFn: (id) =>
-      base44.entities.Purchase.delete(id),
+      mutationFn: (id) =>
+        entities.Purchase.delete(id),
 
     onSuccess: () => {
       queryClient.invalidateQueries({

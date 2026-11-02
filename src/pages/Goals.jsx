@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { base44 } from "@/api/base44Client";
+import { entities } from "@/api/entityClient";
 import { motion, AnimatePresence } from "framer-motion";
 import { Plus, Target, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -24,12 +24,12 @@ export default function Goals() {
 
   const { data: goals = [], isLoading: loadingGoals } = useQuery({
     queryKey: ["goals"],
-    queryFn: () => base44.entities.Goal.list("-created_date", 100),
+    queryFn: () => entities.Purchase.list("-created_date", 100),
   });
 
   const { data: collection = [] } = useQuery({
     queryKey: ["collection"],
-    queryFn: () => base44.entities.CollectionCard.list("-created_date", 200),
+    queryFn: () => entities.CollectionCard.list("-created_date", 200),
   });
 
   const { data: purchases = [] } = useQuery({
@@ -38,7 +38,7 @@ export default function Goals() {
   });
 
   const createMutation = useMutation({
-    mutationFn: (data) => base44.entities.Goal.create(data),
+    mutationFn: (data) => entities.Goal.create(data),
     onSuccess: async (created) => {
       queryClient.invalidateQueries({ queryKey: ["goals"] });
       await logEvent("goal_created", { title: `Meta criada: ${created.title}`, description: created.description });
@@ -46,7 +46,7 @@ export default function Goals() {
   });
 
   const updateMutation = useMutation({
-    mutationFn: ({ id, data }) => base44.entities.Goal.update(id, data),
+    mutationFn: ({ id, data }) => entities.Goal.update(id, data),
     onSuccess: (_, vars) => {
       queryClient.invalidateQueries({ queryKey: ["goals"] });
       if (vars.data.status === "completed") {
@@ -57,7 +57,7 @@ export default function Goals() {
   });
 
   const deleteMutation = useMutation({
-    mutationFn: (id) => base44.entities.Goal.delete(id),
+    mutationFn: (id) => entities.Goal.delete(id),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["goals"] }),
   });
 

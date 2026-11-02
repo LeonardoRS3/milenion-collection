@@ -1,6 +1,6 @@
 import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { base44 } from "@/api/base44Client";
+import { entities } from "@/api/entityClient";
 import { motion, AnimatePresence } from "framer-motion";
 import { Clock, Search, Loader2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
@@ -15,7 +15,7 @@ export default function History() {
 
   const { data: logs = [], isLoading } = useQuery({
     queryKey: ["history"],
-    queryFn: () => base44.entities.HistoryLog.list("-created_date", 300),
+    queryFn: () => entities.HistoryLog.list("-created_date", 300),
   });
 
   const filtered = useMemo(() => {
