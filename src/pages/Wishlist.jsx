@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { base44 } from "@/api/base44Client";
+import { entities } from "@/api/entityClient";
+import { toast } from "sonner";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
@@ -89,7 +90,7 @@ function AddWishlistModal({ open, onClose, onAdded }) {
         throw new Error("Selecione uma carta.");
       }
 
-      return base44.entities.WishlistCard.create({
+      return entities.WishlistCard.create({
         card_name: selectedCard.name,
         card_id: String(selectedCard.id),
         image_url:
@@ -326,7 +327,7 @@ export default function Wishlist() {
   const { data: cards = [], isLoading } = useQuery({
     queryKey: ["wishlist"],
     queryFn: () =>
-      base44.entities.WishlistCard.list(
+      entities.WishlistCard.list(
         "-created_date",
         200
       ),
@@ -335,7 +336,7 @@ export default function Wishlist() {
   const acquireCard = useMutation({
   mutationFn: async (card) => {
     // Cria a carta na coleção
-    await base44.entities.CollectionCard.create({
+    await entities.CollectionCard.create({
       card_name: card.card_name,
       card_id: card.card_id,
       image_url: card.image_url || "",
@@ -353,7 +354,7 @@ export default function Wishlist() {
     });
 
     // Remove a carta da Wishlist
-    await base44.entities.WishlistCard.delete(card.id);
+    await entities.WishlistCard.delete(card.id);
   },
 
   onSuccess: () => {
@@ -378,7 +379,7 @@ export default function Wishlist() {
 
   const deleteCard = useMutation({
     mutationFn: (id) =>
-      base44.entities.WishlistCard.delete(id),
+      entities.WishlistCard.delete(id),
 
     onSuccess: () => {
       queryClient.invalidateQueries({

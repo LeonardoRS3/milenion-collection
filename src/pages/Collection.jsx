@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { base44 } from "@/api/base44Client";
+import { entities } from "@/api/entityClient";
 import { motion, AnimatePresence } from "framer-motion";
 import { Plus, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -10,6 +10,7 @@ import AddCardModal from "@/components/collection/AddCardModal";
 import CollectionCardItem from "@/components/collection/CollectionCardItem";
 import CardDetailSheet from "@/components/collection/CardDetailSheet";
 import AdvancedFilters from "@/components/collection/AdvancedFilters";
+import { toast } from "sonner";
 import { DEFAULT_FILTERS, applyFilters } from "@/lib/collectionFilters";
 import { logEvent } from "@/lib/historyService";
 
@@ -21,7 +22,7 @@ export default function Collection() {
 
   const { data: cards = [], isLoading } = useQuery({
     queryKey: ["collection"],
-    queryFn: () => base44.entities.CollectionCard.list("-created_date", 200),
+    queryFn: () => entities.CollectionCard.list("-created_date", 200),
   });
 
   const updateMutation = useMutation({
@@ -36,7 +37,7 @@ export default function Collection() {
 
     // 1. Atualiza a carta
     const updatedCard =
-      await base44.entities.CollectionCard.update(
+      await entities.CollectionCard.update(
         id,
         data
       );
@@ -56,7 +57,7 @@ export default function Collection() {
       } catch (error) {
         // Tenta desfazer a alteração do status
         try {
-          await base44.entities.CollectionCard.update(
+          await entities.CollectionCard.update(
             id,
             {
               status: oldStatus,
@@ -138,7 +139,7 @@ export default function Collection() {
 });
 
   const deleteMutation = useMutation({
-    mutationFn: (id) => base44.entities.CollectionCard.delete(id),
+    mutationFn: (id) => entities.CollectionCard.delete(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["collection"] });
       logEvent("collection_remove", {
