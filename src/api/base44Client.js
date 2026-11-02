@@ -1,19 +1,7 @@
-import { createClient } from '@supabase/supabase-js';
 
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-const supabaseKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+import { supabase } from '@/api/supabaseClient';
 
-if (!supabaseUrl || !supabaseKey) {
-  console.warn('Supabase environment variables are missing. Set VITE_SUPABASE_URL and VITE_SUPABASE_PUBLISHABLE_KEY.');
-}
-
-export const supabase = createClient(supabaseUrl || 'https://placeholder.invalid', supabaseKey || 'placeholder', {
-  auth: {
-    persistSession: true,
-    autoRefreshToken: true,
-    detectSessionInUrl: true,
-  },
-});
+export { supabase };
 
 const entityMap = {
   CollectionCard: 'collection_cards',
@@ -23,6 +11,7 @@ const entityMap = {
   Purchase: 'purchases',
   HistoryLog: 'history_logs',
 };
+
 
 const getTable = (entityName) => {
   const table = entityMap[entityName];
