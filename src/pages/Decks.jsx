@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { base44 } from "@/api/base44Client";
+import { entities } from "@/api/entityClient";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -29,16 +29,16 @@ export default function Decks() {
 
   const { data: decks = [], isLoading } = useQuery({
     queryKey: ["decks"],
-    queryFn: () => base44.entities.Deck.list("-created_date", 50),
+    queryFn: () => entities.Deck.list("-created_date", 50),
   });
 
   const { data: collection = [] } = useQuery({
     queryKey: ["collection"],
-    queryFn: () => base44.entities.CollectionCard.list("-created_date", 200),
+    queryFn: () => entities.CollectionCard.list("-created_date", 200),
   });
 
   const createDeck = useMutation({
-    mutationFn: (data) => base44.entities.Deck.create(data),
+    mutationFn: (data) => entities.Deck.create(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["decks"] });
       setShowCreate(false);
@@ -48,7 +48,7 @@ export default function Decks() {
   });
 
   const deleteDeck = useMutation({
-    mutationFn: (id) => base44.entities.Deck.delete(id),
+    mutationFn: (id) => entities.Deck.delete(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["decks"] });
       toast.success("Deck removido!");
