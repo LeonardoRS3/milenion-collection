@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { base44 } from "@/api/base44Client";
+import { entities } from "@/api/entityClient";
 import { motion } from "framer-motion";
 import DashboardStats from "@/components/home/DashboardStats";
 import QuickActions from "@/components/home/QuickActions";
@@ -16,17 +16,17 @@ export default function Home() {
 
   const { data: collection = [], isLoading: loadingCollection } = useQuery({
     queryKey: ["collection"],
-    queryFn: () => base44.entities.CollectionCard.list("-created_date", 50),
+    queryFn: () => entities.CollectionCard.list("-created_date", 50),
   });
 
   const { data: wishlist = [], isLoading: loadingWishlist } = useQuery({
     queryKey: ["wishlist"],
-    queryFn: () => base44.entities.WishlistCard.list("-created_date", 50),
+    queryFn: () => entities.WishlistCard.list("-created_date", 50),
   });
 
   const { data: purchases = [] } = useQuery({
     queryKey: ["purchases"],
-    queryFn: () => base44.entities.Purchase.list("-created_date", 50),
+    queryFn: () => entities.Purchase.list("-created_date", 50),
   });
 
   const isLoading = loadingCollection || loadingWishlist;

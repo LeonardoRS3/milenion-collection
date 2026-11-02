@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import { base44 } from "@/api/base44Client";
+import { entities } from "@/api/entityClient";
 import {
   useQuery,
   useQueryClient,
@@ -233,10 +233,10 @@ export default function ImportListModal({
   } = useQuery({
     queryKey: ["decks"],
     queryFn: () =>
-      base44.entities.Deck.list(
-        "-created_date",
-        50
-      ),
+      entities.Deck.list(
+  "-created_date",
+  50
+)
     enabled: open,
   });
 
@@ -598,8 +598,7 @@ export default function ImportListModal({
         for (
           const item of valid
         ) {
-          await base44.entities.CollectionCard.create(
-            {
+          await entities.CollectionCard.create(
               card_name:
                 item.card.name,
 
@@ -696,8 +695,7 @@ export default function ImportListModal({
         for (
           const item of valid
         ) {
-          await base44.entities.WishlistCard.create(
-            {
+          await entities.WishlistCard.create(
               card_name:
                 item.card.name,
 
@@ -890,7 +888,7 @@ export default function ImportListModal({
           }
         }
 
-        await base44.entities.Deck.update(
+       await entities.Deck.update(
           deckId,
           {
             cards:

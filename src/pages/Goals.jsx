@@ -24,7 +24,7 @@ export default function Goals() {
 
   const { data: goals = [], isLoading: loadingGoals } = useQuery({
     queryKey: ["goals"],
-    queryFn: () => entities.Purchase.list("-created_date", 100),
+    queryFn: () => entities.Goal.list("-created_date", 100),
   });
 
   const { data: collection = [] } = useQuery({
@@ -34,7 +34,7 @@ export default function Goals() {
 
   const { data: purchases = [] } = useQuery({
     queryKey: ["purchases"],
-    queryFn: () => base44.entities.Purchase.list("-created_date", 100),
+    queryFn: () => entities.Purchase.list("-created_date", 100),
   });
 
   const createMutation = useMutation({

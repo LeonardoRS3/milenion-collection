@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { base44 } from "@/api/base44Client";
+import { entities } from "@/api/entityClient";
 import { Link } from "react-router-dom";
 import { Target, ChevronRight } from "lucide-react";
 import { motion } from "framer-motion";
@@ -9,7 +9,7 @@ import { computeGoalProgress } from "@/lib/goalUtils";
 export default function ActiveGoalsSection({ collection = [], purchases = [] }) {
   const { data: goals = [] } = useQuery({
     queryKey: ["goals"],
-    queryFn: () => base44.entities.Goal.list("-created_date", 100),
+    queryFn: () => entities.Goal.list("-created_date", 100),
   });
 
   const active = goals

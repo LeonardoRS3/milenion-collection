@@ -1,8 +1,8 @@
-import { base44 } from "@/api/base44Client";
+import { entities } from "@/api/entityClient";
 
 export async function logEvent(eventType, data = {}) {
   try {
-    await base44.entities.HistoryLog.create({
+    await entities.HistoryLog.create({
       event_type: eventType,
       ...data,
     });

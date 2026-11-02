@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { base44 } from "@/api/base44Client";
+import { entities } from "@/api/entityClient";
 import { calcStats } from "@/lib/collectionStats";
 import { motion } from "framer-motion";
 import { Loader2 } from "lucide-react";
@@ -10,12 +10,12 @@ import StatsDeckInfo from "./StatsDeckInfo";
 export default function StatsPage() {
   const { data: cards = [], isLoading: loadingCards } = useQuery({
     queryKey: ["collection"],
-    queryFn: () => base44.entities.CollectionCard.list("-created_date", 500),
+    queryFn: () => entities.CollectionCard.list("-created_date", 500),
   });
 
   const { data: decks = [], isLoading: loadingDecks } = useQuery({
     queryKey: ["decks"],
-    queryFn: () => base44.entities.Deck.list("-created_date", 50),
+    queryFn: () => entities.Deck.list("-created_date", 50),
   });
 
   if (loadingCards || loadingDecks) {

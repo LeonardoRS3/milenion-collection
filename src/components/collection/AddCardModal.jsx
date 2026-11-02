@@ -1,5 +1,5 @@
 import { useState, useRef } from "react";
-import { base44 } from "@/api/base44Client";
+import { entities } from "@/api/entityClient";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -128,7 +128,7 @@ export default function AddCardModal({ open, onClose }) {
     try {
       // 1. Cria a carta na coleção
       createdCollectionCard =
-        await base44.entities.CollectionCard.create({
+       await entities.CollectionCard.create({
           card_name: card.name,
           card_id: String(card.id),
           image_url: imageUrl,
@@ -174,9 +174,9 @@ export default function AddCardModal({ open, onClose }) {
           // Se não conseguiu criar a compra,
           // remove a carta para não deixar os dados inconsistentes.
           try {
-            await base44.entities.CollectionCard.delete(
-              createdCollectionCard.id
-            );
+            await entities.CollectionCard.delete(
+  createdCollectionCard.id
+);
           } catch {
             // Ignora erro secundário.
           }

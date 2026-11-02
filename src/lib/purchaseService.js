@@ -1,4 +1,4 @@
-import { base44 } from "@/api/base44Client";
+import { entities } from "@/api/entityClient";
 
 /**
  * Cria um registro no histórico de compras
@@ -20,7 +20,7 @@ export async function createPurchaseFromCard({
   const safeQuantity = Math.max(1, Number(quantity) || 1);
   const safePrice = Math.max(0, Number(purchasePrice) || 0);
 
-  return base44.entities.Purchase.create({
+  return entities.Purchase.create({
     amount: safePrice * safeQuantity,
     date: date || new Date().toISOString().slice(0, 10),
     store: "",
