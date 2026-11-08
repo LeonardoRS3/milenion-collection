@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { base44 } from "@/api/base44Client";
+import { entities } from "@/api/entityClient";
 import { Button } from "@/components/ui/button";
 import { LogOut, Layers, DollarSign, Star, BookOpen, Loader2 } from "lucide-react";
 import { motion } from "framer-motion";
@@ -15,22 +15,22 @@ export default function Profile() {
 
   const { data: collection = [] } = useQuery({
     queryKey: ["collection"],
-    queryFn: () => base44.entities.CollectionCard.list("-created_date", 500),
+    queryFn: () => entities.CollectionCard.list("-created_date", 500),
   });
 
   const { data: wishlist = [] } = useQuery({
     queryKey: ["wishlist"],
-    queryFn: () => base44.entities.WishlistCard.list("-created_date", 200),
+    queryFn: () => entities.WishlistCard.list("-created_date", 200),
   });
 
   const { data: decks = [] } = useQuery({
     queryKey: ["decks"],
-    queryFn: () => base44.entities.Deck.list("-created_date", 50),
+    queryFn: () => entities.Deck.list("-created_date", 50),
   });
 
   const { data: purchases = [] } = useQuery({
     queryKey: ["purchases"],
-    queryFn: () => base44.entities.Purchase.list("-created_date", 500),
+    queryFn: () => entities.Purchase.list("-created_date", 500),
   });
 
   const totalCards = collection.reduce((sum, c) => sum + (c.quantity || 1), 0);
@@ -39,8 +39,8 @@ export default function Profile() {
   const wishlistPending = wishlist.filter(w => !w.is_purchased).length;
 
   const handleLogout = () => {
-    base44.auth.logout();
-  };
+  base44.auth.logout();
+};
 
   return (
     <div className="px-4 pt-6 pb-4 max-w-2xl mx-auto space-y-6">
