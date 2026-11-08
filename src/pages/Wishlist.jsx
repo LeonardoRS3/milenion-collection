@@ -22,7 +22,6 @@ import {
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { motion, AnimatePresence } from "framer-motion";
-import { toast } from "sonner";
 import PriorityBadge from "@/components/cards/PriorityBadge";
 import { Progress } from "@/components/ui/progress";
 
