@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { Link } from "react-router-dom";
-import { base44 } from "@/api/base44Client";
+import { supabase } from "@/api/supabaseClient";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -13,17 +13,25 @@ export default function ForgotPassword() {
   const [sent, setSent] = useState(false);
 
   const handleSubmit = async (e) => {
-    e.preventDefault();
-    setLoading(true);
-    try {
-      await base44.auth.resetPasswordRequest(email);
-    } catch {
-      // Always show success regardless
-    } finally {
-      setLoading(false);
-      setSent(true);
-    }
-  };
+  e.preventDefault();
+  setLoading(true);
+  
+  try {
+    const { error } = await supabase.auth.resetPasswordForEmail(
+      email.trim(),
+      {
+        redirectTo: `${window.location.origin}/reset-password`,
+      }
+    );
+    
+    if (error) throw error;
+  } catch (error) {
+    console.error("Erro ao solicitar redefinição de senha:", error);
+  } finally {
+    setLoading(false);
+    setSent(true);
+  }
+};
 
   return (
     <AuthLayout

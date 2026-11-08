@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { Link } from "react-router-dom";
-import { base44 } from "@/api/base44Client";
+import { supabase } from "@/api/supabaseClient";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -15,22 +15,49 @@ export default function ResetPassword() {
   const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (e) => {
-    e.preventDefault();
-    setError("");
-    if (newPassword !== confirmPassword) {
-      setError("As senhas não coincidem");
-      return;
+  e.preventDefault();
+  setError("");
+  
+  if (newPassword !== confirmPassword) {
+    setError("As senhas não coincidem");
+    return;
+  }
+  
+  if (newPassword.length < 6) {
+    setError("A senha precisa ter pelo menos 6 caracteres");
+    return;
+  }
+  
+  setLoading(true);
+  
+  try {
+    const { data: { session }, error: sessionError } =
+    await supabase.auth.getSession();
+    
+    if (sessionError) throw sessionError;
+    
+    if (!session) {
+      throw new Error(
+        "Link de recuperação inválido ou expirado. Solicite um novo email."
+      );
     }
-    setLoading(true);
-    try {
-      await base44.auth.resetPassword({ newPassword });
-      setSuccess(true);
-    } catch (err) {
-      setError(err.message || "Falha ao redefinir a senha. Abra o link recebido por email novamente.");
-    } finally {
-      setLoading(false);
-    }
-  };
+    
+    const { error } = await supabase.auth.updateUser({
+      password: newPassword,
+    });
+    
+    if (error) throw error;
+    
+    setSuccess(true);
+  } catch (err) {
+    setError(
+      err.message ||
+      "Falha ao redefinir a senha. Abra novamente o link recebido por email."
+    );
+  } finally {
+    setLoading(false);
+  }
+};
 
   if (success) {
     return (
