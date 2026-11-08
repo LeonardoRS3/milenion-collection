@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { Link } from "react-router-dom";
-import { base44 } from "@/api/base44Client";
+import { supabase } from "@/api/supabaseClient";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -15,22 +15,44 @@ export default function Login() {
   const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (e) => {
-    e.preventDefault();
-    setError("");
-    setLoading(true);
-    try {
-      await base44.auth.loginViaEmailPassword(email, password);
-      window.location.href = "/";
-    } catch (err) {
-      setError(err.message || "Email ou senha inválidos");
-    } finally {
-      setLoading(false);
-    }
-  };
+  e.preventDefault();
+  setError("");
+  setLoading(true);
+  
+  try {
+    const { error } = await supabase.auth.signInWithPassword({
+      email: email.trim(),
+      password,
+    });
+    
+    if (error) throw error;
+    
+    window.location.href = "/";
+  } catch (err) {
+    setError(err.message || "Email ou senha inválidos");
+  } finally {
+    setLoading(false);
+  }
+};
 
-  const handleGoogle = () => {
-    base44.auth.loginWithProvider("google", "/");
-  };
+  const handleGoogle = async () => {
+  setError("");
+  setLoading(true);
+  
+  try {
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: "google",
+      options: {
+        redirectTo: `${window.location.origin}/`,
+      },
+    });
+    
+    if (error) throw error;
+  } catch (err) {
+    setError(err.message || "Não foi possível entrar com Google");
+    setLoading(false);
+  }
+};
 
   return (
     <AuthLayout

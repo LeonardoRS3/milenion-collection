@@ -4,14 +4,10 @@ import { Button } from "@/components/ui/button";
 import { LogOut, Layers, DollarSign, Star, BookOpen, Loader2 } from "lucide-react";
 import { motion } from "framer-motion";
 import StatCard from "@/components/ui/StatCard";
-import { useEffect, useState } from "react";
+import { useAuth } from "@/lib/AuthContext";
 
 export default function Profile() {
-  const [user, setUser] = useState(null);
-
-  useEffect(() => {
-    base44.auth.me().then(setUser);
-  }, []);
+  const { user, logout } = useAuth();
 
   const { data: collection = [] } = useQuery({
     queryKey: ["collection"],
@@ -38,8 +34,12 @@ export default function Profile() {
   const totalSpent = purchases.reduce((sum, p) => sum + (p.amount || 0), 0);
   const wishlistPending = wishlist.filter(w => !w.is_purchased).length;
 
-  const handleLogout = () => {
-  base44.auth.logout();
+  const handleLogout = async () => {
+  try {
+    await logout();
+  } catch (error) {
+    console.error("Erro ao sair da conta:", error);
+  }
 };
 
   return (
