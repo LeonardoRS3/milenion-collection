@@ -228,15 +228,15 @@ export default function ImportListModal({
 
   const abortRef = useRef(false);
 
-  const {
+    const {
     data: decks = [],
   } = useQuery({
     queryKey: ["decks"],
     queryFn: () =>
       entities.Deck.list(
-  "-created_date",
-  50
-)
+        "-created_date",
+        50
+      ),
     enabled: open,
   });
 
