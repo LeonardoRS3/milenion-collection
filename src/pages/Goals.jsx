@@ -68,15 +68,30 @@ export default function Goals() {
 
   const filtered = goalsWithProgress.filter((g) => g.status === tab);
 
-  const handleSave = (data) => {
+  const handleSave = async (data) => {
+  try {
     if (editingGoal) {
-      updateMutation.mutate({ id: editingGoal.id, data });
+      await updateMutation.mutateAsync({
+        id: editingGoal.id,
+        data,
+      });
     } else {
-      createMutation.mutate(data);
+      await createMutation.mutateAsync({
+        ...data,
+        status: "active",
+      });
     }
+    
     setFormOpen(false);
     setEditingGoal(null);
-  };
+  } catch (error) {
+    window.alert(
+      `Não foi possível salvar a meta: ${
+          error?.message || "Erro desconhecido"
+        }`
+    );
+  }
+};
 
   return (
     <div className="px-4 pt-6 pb-24 max-w-2xl mx-auto space-y-5">
