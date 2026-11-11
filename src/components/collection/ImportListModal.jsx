@@ -228,16 +228,16 @@ export default function ImportListModal({
 
   const abortRef = useRef(false);
 
-    const {
+  const {
     data: decks = [],
   } = useQuery({
     queryKey: ["decks"],
     queryFn: () =>
-      entities.Deck.list(
-        "-created_date",
-        50
-      ),
-    enabled: open,
+  entities.Deck.list(
+    "-created_date",
+    50
+  ),
+  enabled: open,
   });
 
   const [
@@ -598,7 +598,7 @@ export default function ImportListModal({
         for (
           const item of valid
         ) {
-          await entities.CollectionCard.create(
+          await entities.CollectionCard.create({
               card_name:
                 item.card.name,
 
@@ -695,7 +695,7 @@ export default function ImportListModal({
         for (
           const item of valid
         ) {
-          await entities.WishlistCard.create(
+          await entities.WishlistCard.create({
               card_name:
                 item.card.name,
 
